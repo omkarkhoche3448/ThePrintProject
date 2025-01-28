@@ -62,7 +62,7 @@ const HomePage = () => {
             Fast, reliable, and high-quality printing services for all your needs
           </p>
           <Link
-            to="/print"
+            to="/print-page"
             className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             <Printer className="h-5 w-5 mr-2" />
