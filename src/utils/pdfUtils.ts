@@ -43,3 +43,17 @@ export async function generateThumbnail(file: File): Promise<string> {
     throw new Error('Failed to generate PDF thumbnail');
   }
 }
+
+
+export const extractPageText = async (
+  file: File,
+  pageNumber: number
+): Promise<string> => {
+  // In a real implementation, you would use pdf.js to extract text
+  // For this example, we'll return placeholder text
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(`Sample text from page ${pageNumber} of ${file.name}`);
+    }, 300);
+  });
+};
