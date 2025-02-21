@@ -1,11 +1,12 @@
-// src/pages/HomePage.tsx
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Printer, Sun, Moon, FileText, Clock, CreditCard } from 'lucide-react';
-import FeaturesGrid from '../components/FeaturesGrid';
+import { Printer, FileText, Clock, CreditCard } from 'lucide-react';
+import FeaturesGrid from '../components/HomePage/FeaturesGrid';
+import { useDispatch, useSelector } from 'react-redux';
+import { ThemeToggle } from '../components/common/ThemeToggle';
 
 const HomePage = () => {
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const dispatch = useDispatch();
+  const isDarkTheme = useSelector((state: { theme: { isDarkMode: boolean } }) => state.theme.isDarkMode);
   const themeClass = isDarkTheme ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-blue-50 to-indigo-50';
 
   const features = [
@@ -40,14 +41,7 @@ const HomePage = () => {
             <Printer className={`h-8 w-8 ${isDarkTheme ? 'text-blue-400' : 'text-blue-500'}`} />
             <h1 className="text-3xl font-bold">PrintService</h1>
           </div>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setIsDarkTheme(!isDarkTheme)}
-              className={`p-2 rounded-full ${isDarkTheme ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-lg transition-colors duration-300`}
-            >
-              {isDarkTheme ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
-            </button>
-          </div>
+          <ThemeToggle />
         </div>
 
         {/* Hero Section */}
@@ -66,7 +60,7 @@ const HomePage = () => {
         </div>
 
         {/* Features Grid */}
-        <FeaturesGrid features={features} /> {/* Use the new component */}
+        <FeaturesGrid features={features} />
 
         {/* CTA Section */}
         <div className={`rounded-lg shadow-lg p-8 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300`}>
