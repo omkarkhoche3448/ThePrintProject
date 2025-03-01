@@ -5,7 +5,7 @@ import SignInPage from './pages/SignInPage';
 import { useSelector } from 'react-redux';
 import { RootState } from './reducer';
 import "./index.css";
-
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 function App() {
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode); 
@@ -17,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/print-page" element={<PrintPage />} />
           <Route path="/signin" element={<SignInPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/" element={<HomePage />} />
         </Routes>
       </div>
