@@ -56,7 +56,7 @@ const HomePage = () => {
         </div>
 
         {/* Hero Section */}
-        <div className={`rounded-lg shadow-lg p-12 mb-12 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 hover:scale-105`}>
+        <div className={`rounded-lg shadow-lg p-12 mb-12 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 `}>
           <h2 className="text-4xl font-bold mb-6">Professional Printing Solutions</h2>
           <p className={`text-xl mb-8 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
             Fast, reliable, and high-quality printing services for all your needs
@@ -75,7 +75,7 @@ const HomePage = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 hover:scale-105`}
+              className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 `}
             >
               <div className={`mb-4 ${isDarkTheme ? 'text-blue-400' : 'text-blue-500'}`}>
                 {feature.icon}
@@ -89,7 +89,7 @@ const HomePage = () => {
         </div>
 
         {/* CTA Section */}
-        <div className={`rounded-lg shadow-lg p-8 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 hover:scale-105`}>
+        <div className={`rounded-lg shadow-lg p-8 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 `}>
           <h2 className="text-2xl font-bold mb-4">Ready to start printing?</h2>
           <p className={`mb-6 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
             Upload your documents and get started with our easy-to-use printing service
