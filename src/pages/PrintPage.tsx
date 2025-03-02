@@ -1,13 +1,15 @@
-import React, { useState, useCallback } from 'react';
-import { FileUploader } from '../components/FileUploader';
-import { PageSelector } from '../components/PageSelector';
-import { PrintOptionsForm } from '../components/PrintOptionsForm';
-import { PriceCalculator } from '../components/PriceCalculator';
+import { useState, useCallback } from 'react';
+import FileUploadSection from '../components/FileUploadSection';
+import QuickOptions from '../components/QuickOptions';
+import FileDetails from '../components/FileDetails';
+import CheckoutSection from '../components/CheckoutSection';
 import { getPageCount, generateThumbnail } from '../utils/pdfUtils';
 import { calculatePrice } from '../utils/pricing';
 import type { PrintFile, PrintOptions } from '../types/print';
-import { Printer, Lock, Sun, Moon } from 'lucide-react';
+import { Printer, Sun, Moon } from 'lucide-react';
 import CryptoJS from 'crypto-js';
+import { useDispatch, useSelector } from 'react-redux';
+import { toggleTheme } from '../slices/themeSlice';
 
 const defaultPrintOptions: PrintOptions = {
   paperSize: 'A4',
@@ -22,7 +24,8 @@ function PrintPage() {
   const [globalOptions, setGlobalOptions] = useState<PrintOptions>(defaultPrintOptions);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const dispatch = useDispatch();
+  const isDarkTheme = useSelector((state) => state.theme.isDarkMode);
 
   const handleFilesAdded = useCallback(async (newFiles: File[]) => {
     setIsProcessing(true);
@@ -154,7 +157,7 @@ function PrintPage() {
             <h1 className="text-3xl font-bold">Print Order</h1>
           </div>
           <button
-            onClick={() => setIsDarkTheme(!isDarkTheme)}
+            onClick={() => dispatch(toggleTheme())}
             className={`p-2 rounded-full ${
               isDarkTheme 
                 ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
@@ -167,115 +170,40 @@ function PrintPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}>
-              <h2 className="text-xl font-semibold mb-4">Upload Files</h2>
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
-                  {error}
-                </div>
-              )}
-              <FileUploader
-                onFilesAdded={handleFilesAdded}
-                files={files}
-                onRemoveFile={handleRemoveFile}
-                isDarkTheme={isDarkTheme}
-              />
-            </div>
+            <FileUploadSection
+              onFilesAdded={handleFilesAdded}
+              files={files}
+              onRemoveFile={handleRemoveFile}
+              isDarkTheme={isDarkTheme}
+              error={error}
+            />
 
             {files.length > 0 && (
-              <div className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Quick Options</h2>
-                  <button
-                    onClick={applyGlobalOptions}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
-                  >
-                    Apply to All Files
-                  </button>
-                </div>
-                <PrintOptionsForm
-                  options={globalOptions}
-                  onChange={handleGlobalOptionsChange}
-                  isGlobal
-                  isDarkTheme={isDarkTheme}
-                />
-              </div>
+              <QuickOptions
+                globalOptions={globalOptions}
+                onChange={handleGlobalOptionsChange}
+                applyGlobalOptions={applyGlobalOptions}
+                isDarkTheme={isDarkTheme}
+              />
             )}
 
             {files.map((file) => (
-              <div
+              <FileDetails
                 key={file.id}
-                className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}
-              >
-                <div className="flex items-center space-x-4 mb-4">
-                  {file.thumbnail && (
-                    <img
-                      src={file.thumbnail}
-                      alt="PDF preview"
-                      className="h-16 w-16 object-cover rounded-lg shadow"
-                    />
-                  )}
-                  <div>
-                    <h3 className="text-lg font-medium">{file.file.name}</h3>
-                    <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {file.pageCount} pages
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h4 className={`text-sm font-medium ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                      Page Selection
-                    </h4>
-                    <PageSelector
-                      pageCount={file.pageCount}
-                      value={file.selectedPages}
-                      onChange={(pages) => handlePageSelection(file.id, pages)}
-                      isDarkTheme={isDarkTheme}
-                    />
-                  </div>
-
-                  <div>
-                    <h4 className={`text-sm font-medium ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                      Custom Options
-                    </h4>
-                    <PrintOptionsForm
-                      options={file.options}
-                      onChange={(options) => handleOptionsChange(file.id, options)}
-                      isDarkTheme={isDarkTheme}
-                    />
-                  </div>
-                </div>
-              </div>
+                file={file}
+                onPageSelection={(pages) => handlePageSelection(file.id, pages)}
+                onOptionsChange={(options) => handleOptionsChange(file.id, options)}
+                isDarkTheme={isDarkTheme}
+              />
             ))}
           </div>
 
-          <div className="lg:col-span-1">
-            <div className="sticky top-8 space-y-4">
-              <PriceCalculator files={files} isDarkTheme={isDarkTheme} />
-              
-              <button
-                onClick={handleCheckout}
-                disabled={files.length === 0 || isProcessing}
-                className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-white font-medium transition-colors duration-200
-                  ${
-                    files.length === 0 || isProcessing
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600'
-                  }`}
-              >
-                <Lock className="h-5 w-5" />
-                <span>Proceed to Checkout</span>
-              </button>
-              
-              {isProcessing && (
-                <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-500'} text-center`}>
-                  Processing files...
-                </p>
-              )}
-            </div>
-          </div>
+          <CheckoutSection
+            files={files}
+            isProcessing={isProcessing}
+            isDarkTheme={isDarkTheme}
+            handleCheckout={handleCheckout}
+          />
         </div>
       </div>
     </div>

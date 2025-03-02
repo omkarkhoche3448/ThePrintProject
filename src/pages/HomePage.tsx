@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+// src/pages/HomePage.tsx
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Printer, FileText, Clock, CreditCard, Sun, Moon } from 'lucide-react';
+import { Printer, Sun, Moon, FileText, Clock, CreditCard } from 'lucide-react';
+import FeaturesGrid from '../components/FeaturesGrid';
 
 const HomePage = () => {
   const [isDarkTheme, setIsDarkTheme] = useState(false);
-
-  const themeClass = isDarkTheme 
-    ? 'bg-gray-900 text-white' 
-    : 'bg-gradient-to-br from-blue-50 to-indigo-50';
+  const themeClass = isDarkTheme ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-blue-50 to-indigo-50';
 
   const features = [
     {
@@ -44,11 +43,7 @@ const HomePage = () => {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setIsDarkTheme(!isDarkTheme)}
-              className={`p-2 rounded-full ${
-                isDarkTheme 
-                  ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' 
-                  : 'bg-white text-gray-800 hover:bg-gray-100'
-              } shadow-lg transition-colors duration-300`}
+              className={`p-2 rounded-full ${isDarkTheme ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-100'} shadow-lg transition-colors duration-300`}
             >
               {isDarkTheme ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
             </button>
@@ -56,7 +51,7 @@ const HomePage = () => {
         </div>
 
         {/* Hero Section */}
-        <div className={`rounded-lg shadow-lg p-12 mb-12 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 `}>
+        <div className={`rounded-lg shadow-lg p-12 mb-12 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300`}>
           <h2 className="text-4xl font-bold mb-6">Professional Printing Solutions</h2>
           <p className={`text-xl mb-8 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
             Fast, reliable, and high-quality printing services for all your needs
@@ -71,25 +66,10 @@ const HomePage = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 `}
-            >
-              <div className={`mb-4 ${isDarkTheme ? 'text-blue-400' : 'text-blue-500'}`}>
-                {feature.icon}
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className={isDarkTheme ? 'text-gray-300' : 'text-gray-600'}>
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
+        <FeaturesGrid features={features} /> {/* Use the new component */}
 
         {/* CTA Section */}
-        <div className={`rounded-lg shadow-lg p-8 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300 `}>
+        <div className={`rounded-lg shadow-lg p-8 text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} transform transition-transform duration-300`}>
           <h2 className="text-2xl font-bold mb-4">Ready to start printing?</h2>
           <p className={`mb-6 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
             Upload your documents and get started with our easy-to-use printing service

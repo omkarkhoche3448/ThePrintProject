@@ -9,7 +9,7 @@ const BASE_PRICES = {
 };
 
 export function calculatePrice(
-  pageCount: number,
+  _pageCount: number,
   options: PrintOptions,
   selectedPages: string
 ): number {
