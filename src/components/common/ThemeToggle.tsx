@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleTheme } from '../../slices/themeSlice';
-import { Moon, Sun } from '../../icons';
+import { Moon, Sun } from 'lucide-react'; 
 
 export const ThemeToggle: React.FC = () => {
   const dispatch = useDispatch();
