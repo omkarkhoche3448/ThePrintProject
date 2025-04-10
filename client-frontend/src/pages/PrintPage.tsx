@@ -9,7 +9,8 @@ import {
   LogOut, 
   FileText, 
   Settings, 
-  CreditCard 
+  CreditCard,
+  ClipboardList
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CryptoJS from 'crypto-js';
@@ -259,10 +260,9 @@ function PrintPage() {
       });
   
       // Send the request to your backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/create`, {
+      const response = await fetch(`http://localhost:3000/orders/create`, {
         method: 'POST',
-        body: formData,
-        credentials: 'include'
+        body: formData
       });
   
       if (!response.ok) {
@@ -333,6 +333,16 @@ function PrintPage() {
                 >
                   <LogOut className="h-5 w-5" />
                 </motion.button>
+                <Link 
+                  to="/orders"
+                  className={`px-4 py-2 rounded-full transition-colors
+                    ${isDarkTheme 
+                      ? 'bg-gray-800 text-white hover:bg-gray-700' 
+                      : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                >
+                  <ClipboardList className="h-5 w-5" />
+                </Link>
               </div>
             )}
 

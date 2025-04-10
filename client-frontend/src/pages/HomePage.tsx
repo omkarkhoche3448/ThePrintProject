@@ -155,6 +155,16 @@ const HomePage = () => {
                   >
                     <LogOut className="h-5 w-5" />
                   </motion.button>
+                  <Link
+                    to="/orders"
+                    className={`inline-block px-6 py-3 rounded-full text-lg transition-colors ml-4
+                      ${isDarkTheme 
+                        ? 'bg-gray-800 text-white hover:bg-gray-700' 
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
+                      }`}
+                  >
+                    My Orders
+                  </Link>
                 </div>
               )}
             </SignedIn>

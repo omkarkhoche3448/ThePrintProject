@@ -4,6 +4,7 @@ import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { SignIn, SignUp } from '@clerk/clerk-react';
 import PrintPage from './pages/PrintPage';
 import HomePage from './pages/HomePage';
+import OrdersPage from './pages/OrdersPage'; // Add this import
 
 function App() {
   return (
@@ -26,9 +27,28 @@ function App() {
           } 
         />
         
-        {/* Redirect Unauthenticated Users from Print Page */}
+        {/* Protected Orders Page */}
+        <Route 
+          path="/orders" 
+          element={
+            <SignedIn>
+              <OrdersPage />
+            </SignedIn>
+          } 
+        />
+        
+        {/* Redirect Unauthenticated Users from Protected Pages */}
         <Route 
           path="/print-page" 
+          element={
+            <SignedOut>
+              <RedirectToSignIn />
+            </SignedOut>
+          } 
+        />
+        
+        <Route 
+          path="/orders" 
           element={
             <SignedOut>
               <RedirectToSignIn />

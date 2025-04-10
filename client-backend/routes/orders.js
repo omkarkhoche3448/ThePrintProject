@@ -197,4 +197,47 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// Get all orders for a specific user
+router.get('/user/:userId', async (req, res) => {
+  try {
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection not available'
+      });
+    }
+
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    const PrintJob = mongoose.model('PrintJob');
+    
+    // Find all print jobs for this user
+    const userOrders = await PrintJob.find({ userId })
+      .populate('shopkeeperId', 'name address phone') // Populate shopkeeper details
+      .sort({ 'timeline.created': -1 }); // Sort by creation date (newest first)
+    
+    return res.status(200).json({
+      success: true,
+      count: userOrders.length,
+      orders: userOrders
+    });
+    
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user orders',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
