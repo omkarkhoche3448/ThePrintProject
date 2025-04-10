@@ -83,6 +83,8 @@ function PrintPage() {
   const [selectedShopkeeper, setSelectedShopkeeper] = useState<Shopkeeper | null>(null);
   const [isPriorityOrder, setIsPriorityOrder] = useState(false);
   const [uploadHovered, setUploadHovered] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
 
   // Clerk User Context
   const { user } = useUser();
@@ -264,9 +266,13 @@ function PrintPage() {
       }
   
       const orderData = await response.json();
-      // Redirect to payment page or order confirmation
-      navigate(`/payment/${orderData.orderId}`);
-  
+      
+      // Show confirmation modal instead of redirecting immediately
+      setShowConfirmationModal(true);
+      
+      // Start countdown for auto-redirect
+      setRedirectCountdown(5);
+      
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to process order');
       console.error('Checkout error:', error);
@@ -274,6 +280,20 @@ function PrintPage() {
       setIsProcessing(false);
     }
   }, [files, user, selectedShopkeeper, isPriorityOrder, navigate]);
+
+  // Handle countdown and redirect
+  useEffect(() => {
+    let timer;
+    if (showConfirmationModal && redirectCountdown > 0) {
+      timer = setTimeout(() => {
+        setRedirectCountdown(redirectCountdown - 1);
+      }, 1000);
+    } else if (showConfirmationModal && redirectCountdown === 0) {
+      // Redirect to orders page
+      navigate('/orders');
+    }
+    return () => clearTimeout(timer);
+  }, [showConfirmationModal, redirectCountdown, navigate]);
 
   // Theme toggle method
   const toggleTheme = () => {
@@ -741,6 +761,96 @@ function PrintPage() {
           </div>
         </div>
       </div>
+      
+      {/* Order Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmationModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className={`max-w-md w-full rounded-2xl p-8 ${
+                isDarkTheme ? 'bg-[#1a1a1a] border border-white/10' : 'bg-white shadow-xl'
+              }`}
+            >
+              <div className="flex flex-col items-center text-center">
+                {/* Success animation */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 260, 
+                    damping: 20,
+                    delay: 0.3 
+                  }}
+                  className={`w-24 h-24 mb-6 rounded-full flex items-center justify-center ${
+                    isDarkTheme ? 'bg-green-900/30' : 'bg-green-100'
+                  }`}
+                >
+                  <motion.div
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.8, delay: 0.5 }}
+                  >
+                    <Check className={`w-12 h-12 ${
+                      isDarkTheme ? 'text-green-400' : 'text-green-600'
+                    }`} />
+                  </motion.div>
+                </motion.div>
+                
+                <h2 className="text-2xl font-bold mb-2">Order Confirmed!</h2>
+                <p className={`mb-6 ${
+                  isDarkTheme ? 'text-white/70' : 'text-black/70'
+                }`}>
+                  Thank you for your order. Your documents are being processed.
+                </p>
+                
+                <div className={`px-4 py-2 rounded-full text-sm ${
+                  isDarkTheme ? 'bg-white/10' : 'bg-black/5'
+                }`}>
+                  Redirecting to orders page in {redirectCountdown} seconds...
+                </div>
+                
+                <div className="mt-6 flex gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/orders')}
+                    className={`px-6 py-2 rounded-full font-medium ${
+                      isDarkTheme 
+                        ? 'bg-white text-black hover:bg-white/90' 
+                        : 'bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]/90'
+                    }`}
+                  >
+                    View My Orders
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowConfirmationModal(false)}
+                    className={`px-6 py-2 rounded-full font-medium ${
+                      isDarkTheme 
+                        ? 'bg-white/10 hover:bg-white/20' 
+                        : 'bg-black/5 hover:bg-black/10'
+                    }`}
+                  >
+                    Close
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
     </div>
   );
 }
