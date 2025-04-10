@@ -13,10 +13,17 @@ import {
   AlertCircle,
   RefreshCw,
   Hourglass,
-  BookOpen,
+  Home,
   ArrowLeft,
+  ChevronRight,
+  Filter,
+  Calendar,
+  MapPin,
+  CreditCard,
+  User,
+  Menu
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 interface PrintConfig {
   copies: number;
@@ -73,7 +80,7 @@ interface Order {
 }
 
 const OrdersPage: React.FC = () => {
-  // Existing state
+  // Theme state with localStorage
   const [isDarkTheme, setIsDarkTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || 
@@ -85,13 +92,18 @@ const OrdersPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'all' | 'active' | 'completed'>('all');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // User context
   const { user } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  
+  // Scroll animations
+  const { scrollYProgress } = useScroll();
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0.9]);
 
-  // Apply theme
+  // Apply theme to document and localStorage
   useEffect(() => {
     if (isDarkTheme) {
       document.documentElement.classList.add('dark');
@@ -201,15 +213,17 @@ const OrdersPage: React.FC = () => {
     return 'pending';
   };
 
-  // Rest of your existing methods
+  // Toggle theme
   const toggleTheme = () => {
     setIsDarkTheme(prevTheme => !prevTheme);
   };
 
+  // Logout handler
   const handleLogout = () => {
     signOut(() => navigate('/'));
   };
 
+  // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
@@ -228,97 +242,119 @@ const OrdersPage: React.FC = () => {
       case 'completed':
         return { 
           icon: <CheckSquare className="h-5 w-5" />, 
-          color: 'text-green-500',
+          color: isDarkTheme ? 'text-green-400' : 'text-green-500',
+          bg: isDarkTheme ? 'bg-green-400/10' : 'bg-green-500/10',
+          border: isDarkTheme ? 'border-green-400/20' : 'border-green-500/20',
           label: 'Completed'
         };
       case 'processing':
         return { 
           icon: <RefreshCw className="h-5 w-5" />, 
-          color: 'text-blue-500',
+          color: isDarkTheme ? 'text-blue-400' : 'text-blue-500',
+          bg: isDarkTheme ? 'bg-blue-400/10' : 'bg-blue-500/10',
+          border: isDarkTheme ? 'border-blue-400/20' : 'border-blue-500/20',
           label: 'Processing'
         };
       case 'failed':
         return { 
           icon: <AlertCircle className="h-5 w-5" />, 
-          color: 'text-red-500',
+          color: isDarkTheme ? 'text-red-400' : 'text-red-500',
+          bg: isDarkTheme ? 'bg-red-400/10' : 'bg-red-500/10',
+          border: isDarkTheme ? 'border-red-400/20' : 'border-red-500/20',
           label: 'Failed'
         };
       case 'cancelled':
         return { 
           icon: <AlertCircle className="h-5 w-5" />, 
-          color: 'text-red-500',
+          color: isDarkTheme ? 'text-red-400' : 'text-red-500',
+          bg: isDarkTheme ? 'bg-red-400/10' : 'bg-red-500/10',
+          border: isDarkTheme ? 'border-red-400/20' : 'border-red-500/20',
           label: 'Cancelled'
         };
       default:
         return { 
           icon: <Hourglass className="h-5 w-5" />, 
-          color: 'text-yellow-500',
+          color: isDarkTheme ? 'text-amber-400' : 'text-amber-500',
+          bg: isDarkTheme ? 'bg-amber-400/10' : 'bg-amber-500/10',
+          border: isDarkTheme ? 'border-amber-400/20' : 'border-amber-500/20',
           label: 'Pending'
         };
     }
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className={`min-h-screen transition-colors duration-500 
-        ${isDarkTheme 
-          ? 'bg-[#121212] text-white' 
-          : 'bg-white text-black'
-        }`}
+    <div className={`min-h-screen font-sans transition-colors duration-500 
+      ${isDarkTheme 
+        ? 'bg-[#0a0a0a] text-white' 
+        : 'bg-[#f5f5f7] text-[#1d1d1f]'
+      }`}
     >
-      {/* Navigation */}
+      {/* Glassmorphic Navigation */}
       <motion.nav 
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className={`fixed top-0 left-0 right-0 z-50 
+        style={{ opacity: headerOpacity }}
+        className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl
           ${isDarkTheme 
-            ? 'bg-black/80 text-white' 
-            : 'bg-white/80 text-black'
-          } backdrop-blur-lg shadow-sm`}
+            ? 'bg-black/30 border-b border-white/5' 
+            : 'bg-white/30 border-b border-black/5'
+          }`}
       >
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Printer className={`h-8 w-8 ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`} />
-            <h1 className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-black'}`}>PrintEasy</h1>
-          </div>
+        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+          <Link to="/">
+            <motion.div 
+              className="flex items-center space-x-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Printer className={`h-7 w-7 ${isDarkTheme ? 'text-white' : 'text-[#1d1d1f]'}`} />
+              <h1 className="text-xl font-medium tracking-tight">PrintEasy</h1>
+            </motion.div>
+          </Link>
           
-          <div className="flex items-center space-x-4">
-            <Link 
-              to="/print-page"
-              className={`px-4 py-2 rounded-full transition-colors
+          <div className="hidden md:flex items-center space-x-8">
+            <Link
+              to="/"
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all
                 ${isDarkTheme 
-                  ? 'bg-gray-800 text-white hover:bg-gray-700' 
-                  : 'bg-gray-100 text-black hover:bg-gray-200'
+                  ? 'bg-white/10 hover:bg-white/20' 
+                  : 'bg-black/5 hover:bg-black/10'
                 }`}
             >
-              <FileText className="h-5 w-5" />
+              <Home className="h-4 w-4" />
+              <span>Home</span>
             </Link>
             
-            <Link 
-              to="/"
-              className={`px-4 py-2 rounded-full transition-colors
+            <Link
+              to="/print-page"
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all
                 ${isDarkTheme 
-                  ? 'bg-gray-800 text-white hover:bg-gray-700' 
-                  : 'bg-gray-100 text-black hover:bg-gray-200'
+                  ? 'bg-white/10 hover:bg-white/20' 
+                  : 'bg-black/5 hover:bg-black/10'
                 }`}
             >
-              <BookOpen className="h-5 w-5" />
+              <FileText className="h-4 w-4" />
+              <span>Print</span>
             </Link>
             
             {user && (
-              <div className="flex items-center space-x-4">
-                <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-black'}`}>
-                  Hi, {user.firstName || user.username}
-                </div>
+              <div className="flex items-center space-x-6">
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`text-sm font-medium px-4 py-2 rounded-full
+                    ${isDarkTheme ? 'bg-white/10' : 'bg-black/5'}`}>
+                  Hello, {user.firstName || user.username}
+                </motion.div>
+                
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
-                  className="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  className={`p-2.5 rounded-full transition-all
+                    ${isDarkTheme 
+                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                      : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                    }`}
                 >
                   <LogOut className="h-5 w-5" />
                 </motion.button>
@@ -327,262 +363,476 @@ const OrdersPage: React.FC = () => {
 
             <motion.button
               whileHover={{ rotate: 15 }}
-              whileTap={{ rotate: -15 }}
+              whileTap={{ scale: 0.9 }}
               onClick={toggleTheme}
-              className={`p-2 rounded-full transition-colors 
+              className={`p-2.5 rounded-full transition-all
                 ${isDarkTheme 
-                  ? 'bg-gray-800 text-white hover:bg-gray-700' 
-                  : 'bg-gray-100 text-black hover:bg-gray-200'
+                  ? 'bg-white/10 hover:bg-white/20' 
+                  : 'bg-black/5 hover:bg-black/10'
                 }`}
             >
-              {isDarkTheme ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
+              {isDarkTheme 
+                ? <Sun className="h-5 w-5 text-yellow-300" /> 
+                : <Moon className="h-5 w-5 text-blue-700" />
+              }
             </motion.button>
           </div>
-        </div>
-      </motion.nav>
-
-      {/* Main Content */}
-      <div className="pt-24 px-4 pb-12 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className={`text-3xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-            {selectedOrder ? 'Order Details' : 'My Orders'}
-          </h1>
           
-          {selectedOrder ? (
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setSelectedOrder(null)}
-              className={`flex items-center px-4 py-2 rounded-full
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`p-2.5 rounded-full transition-all
                 ${isDarkTheme 
-                  ? 'bg-gray-800 text-white hover:bg-gray-700' 
-                  : 'bg-gray-100 text-black hover:bg-gray-200'
+                  ? 'bg-white/10 hover:bg-white/20' 
+                  : 'bg-black/5 hover:bg-black/10'
                 }`}
             >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to Orders
+              <Menu className="h-6 w-6" />
             </motion.button>
-          ) : (
-            <div className="flex items-center space-x-4">
-              {/* View mode selection */}
-              <div className={`flex rounded-lg overflow-hidden ${isDarkTheme ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                <button
-                  onClick={() => setViewMode('all')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors
-                    ${viewMode === 'all' 
-                      ? isDarkTheme 
-                        ? 'bg-blue-700 text-white' 
-                        : 'bg-blue-500 text-white'
-                      : ''
-                    }`}
-                >
-                  All Orders
-                </button>
-                <button
-                  onClick={() => setViewMode('active')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors
-                    ${viewMode === 'active' 
-                      ? isDarkTheme 
-                        ? 'bg-blue-700 text-white' 
-                        : 'bg-blue-500 text-white'
-                      : ''
-                    }`}
-                >
-                  Active
-                </button>
-                <button
-                  onClick={() => setViewMode('completed')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors
-                    ${viewMode === 'completed' 
-                      ? isDarkTheme 
-                        ? 'bg-blue-700 text-white' 
-                        : 'bg-blue-500 text-white'
-                      : ''
-                    }`}
-                >
-                  Completed
-                </button>
-              </div>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={fetchOrders}
-                disabled={isRefreshing}
-                className={`flex items-center px-4 py-2 rounded-full transition-colors
-                  ${isDarkTheme 
-                    ? 'bg-blue-700 text-white hover:bg-blue-600' 
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                  } ${isRefreshing ? 'opacity-70 cursor-not-allowed' : ''}`}
-              >
-                <RefreshCw className={`h-5 w-5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </motion.button>
-            </div>
-          )}
+          </div>
         </div>
-
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div 
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex justify-center items-center h-64"
+        
+        {/* Mobile menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className={`md:hidden overflow-hidden
+                ${isDarkTheme 
+                  ? 'bg-black/50 border-b border-white/5' 
+                  : 'bg-white/50 border-b border-black/5'
+                } backdrop-blur-xl`}
             >
-              <RefreshCw className={`h-10 w-10 animate-spin ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`} />
-            </motion.div>
-          ) : error ? (
-            <motion.div 
-              key="error"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className={`p-6 rounded-lg text-center ${isDarkTheme ? 'bg-red-900/30' : 'bg-red-100'}`}
-            >
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <p className="text-red-500 text-lg">{error}</p>
-              <button 
-                onClick={fetchOrders}
-                className={`mt-4 px-4 py-2 rounded-lg 
-                  ${isDarkTheme ? 'bg-red-700 hover:bg-red-600' : 'bg-red-500 hover:bg-red-400'} 
-                  text-white transition-colors`}
-              >
-                Try Again
-              </button>
-            </motion.div>
-          ) : selectedOrder ? (
-            <OrderDetails 
-              order={selectedOrder} 
-              isDarkTheme={isDarkTheme} 
-            />
-          ) : (
-            <motion.div 
-              key="orders-list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              {groupedOrders.length === 0 ? (
-                <div className={`p-8 rounded-lg text-center ${isDarkTheme ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                  <ClipboardList className={`h-16 w-16 mx-auto mb-4 ${isDarkTheme ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <h3 className="text-xl font-medium mb-2">No Orders Found</h3>
-                  <p className={`mb-6 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-                    You haven't placed any print orders yet
-                  </p>
-                  <Link 
-                    to="/print-page"
-                    className={`px-6 py-3 rounded-full transition-colors
+              <div className="px-6 py-3 space-y-3">
+                <Link
+                  to="/"
+                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                    ${isDarkTheme 
+                      ? 'bg-white/10 hover:bg-white/20' 
+                      : 'bg-black/5 hover:bg-black/10'
+                    }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Home className="h-5 w-5" />
+                  <span>Home</span>
+                </Link>
+                
+                <Link
+                  to="/print-page"
+                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                    ${isDarkTheme 
+                      ? 'bg-white/10 hover:bg-white/20' 
+                      : 'bg-black/5 hover:bg-black/10'
+                    }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>Print</span>
+                </Link>
+                
+                {user && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      handleLogout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all
                       ${isDarkTheme 
-                        ? 'bg-blue-700 text-white hover:bg-blue-600' 
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                        : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
                       }`}
                   >
-                    Create Your First Order
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {groupedOrders.map((orderGroup, groupIndex) => {
-                    // Get the first order in the group (they all have the same creation time and shop)
-                    const firstOrder = orderGroup[0];
-                    const groupStatus = getGroupStatus(orderGroup);
-                    const isPriority = isGroupPriority(orderGroup);
-                    const statusInfo = getStatusInfo(groupStatus);
-                    
-                    return (
-                      <motion.div
-                        key={groupIndex}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setSelectedOrder(firstOrder)}
-                        className={`p-6 rounded-lg cursor-pointer transition-colors
-                          ${isPriority 
-                            ? isDarkTheme 
-                              ? 'bg-amber-900/40 hover:bg-amber-900/60 border border-amber-500/50' 
-                              : 'bg-amber-50 hover:bg-amber-100 border border-amber-200'
-                            : isDarkTheme 
-                              ? 'bg-gray-800 hover:bg-gray-700' 
-                              : 'bg-white hover:bg-gray-50'
-                          } shadow-lg`}
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="font-medium text-lg mb-1">
-                              Order #{firstOrder._id.substring(firstOrder._id.length - 6)}
-                            </h3>
-                            <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {orderGroup.length} {orderGroup.length === 1 ? 'file' : 'files'}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {isPriority && (
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium
-                                ${isDarkTheme ? 'bg-amber-900/60 text-amber-300' : 'bg-amber-100 text-amber-800'}`}
-                              >
-                                Priority
-                              </span>
-                            )}
-                            <div className={`flex items-center px-3 py-1 rounded-full 
-                              ${statusInfo.color} ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-100'}`}
-                            >
-                              {statusInfo.icon}
-                              <span className="ml-2 text-sm font-medium">{statusInfo.label}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mb-4 pb-4 border-b border-gray-700">
-                          <div className="flex items-center mb-2">
-                            <Printer className="h-4 w-4 mr-2 opacity-70" />
-                            <span className="text-sm">
-                              {firstOrder.printConfig.copies} {firstOrder.printConfig.copies > 1 ? 'copies' : 'copy'}, {' '}
-                              {firstOrder.printConfig.colorMode === 'blackAndWhite' ? 'B&W' : 'Color'}, {' '}
-                              {firstOrder.printConfig.pageSize}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-2 opacity-70" />
-                            <span className="text-sm">{formatDate(firstOrder.createdAt)}</span>
-                          </div>
-                        </div>
-                        
-                        {/* File List Preview */}
-                        <div className="mb-4 max-h-24 overflow-y-auto">
-                          <p className="text-xs font-medium mb-1">Files:</p>
-                          <ul className="text-xs space-y-1">
-                            {orderGroup.map((order, i) => (
-                              <li key={i} className="truncate">
-                                {i + 1}. {order.file.originalName}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm">
-                            {firstOrder.shopkeeperId ? (
-                              <span>{firstOrder.shopkeeperId.name}</span>
-                            ) : (
-                              <span className="text-gray-500">No shop assigned</span>
-                            )}
-                          </div>
-                          <div className={`text-sm ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`}>
-                            View Details →
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
+                    <LogOut className="h-5 w-5" />
+                    <span>Log Out</span>
+                  </motion.button>
+                )}
+                
+                <button
+                  onClick={() => {
+                    toggleTheme();
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium transition-all
+                    ${isDarkTheme 
+                      ? 'bg-white/10 hover:bg-white/20' 
+                      : 'bg-black/5 hover:bg-black/10'
+                    }`}
+                >
+                  {isDarkTheme 
+                    ? <Sun className="h-5 w-5 text-yellow-300" /> 
+                    : <Moon className="h-5 w-5 text-blue-700" />
+                  }
+                  <span>{isDarkTheme ? 'Light Mode' : 'Dark Mode'}</span>
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
+      </motion.nav>
+
+      {/* Main Content */}
+      <div className="pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className={`text-3xl md:text-4xl font-medium tracking-tight
+                ${isDarkTheme ? 'text-white' : 'text-[#1d1d1f]'}`}
+            >
+              {selectedOrder ? 'Order Details' : 'My Orders'}
+            </motion.h1>
+            
+            {selectedOrder ? (
+              <motion.button
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setSelectedOrder(null)}
+                className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all
+                  ${isDarkTheme 
+                    ? 'bg-white/10 hover:bg-white/20' 
+                    : 'bg-black/5 hover:bg-black/10'
+                  }`}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Orders</span>
+              </motion.button>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                {/* View mode selection */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className={`rounded-full overflow-hidden flex items-center p-1
+                    ${isDarkTheme 
+                      ? 'bg-white/10 border border-white/10' 
+                      : 'bg-black/5 border border-black/5'
+                    }`}
+                >
+                  <button
+                    onClick={() => setViewMode('all')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all
+                      ${viewMode === 'all' 
+                        ? isDarkTheme 
+                          ? 'bg-white text-black' 
+                          : 'bg-[#1d1d1f] text-white'
+                        : ''
+                      }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setViewMode('active')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all
+                      ${viewMode === 'active' 
+                        ? isDarkTheme 
+                          ? 'bg-white text-black' 
+                          : 'bg-[#1d1d1f] text-white'
+                        : ''
+                      }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    onClick={() => setViewMode('completed')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all
+                      ${viewMode === 'completed' 
+                        ? isDarkTheme 
+                          ? 'bg-white text-black' 
+                          : 'bg-[#1d1d1f] text-white'
+                        : ''
+                      }`}
+                  >
+                    Completed
+                  </button>
+                </motion.div>
+                
+                <motion.button
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={fetchOrders}
+                  disabled={isRefreshing}
+                  className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all
+                    ${isDarkTheme 
+                      ? 'bg-white text-black hover:bg-white/90' 
+                      : 'bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]/90'
+                    } ${isRefreshing ? 'opacity-70' : ''}`}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                </motion.button>
+              </div>
+            )}
+          </div>
+
+          <AnimatePresence mode="wait">
+            {loading ? (
+              <motion.div 
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center h-64 gap-4"
+              >
+                <RefreshCw className={`h-10 w-10 animate-spin 
+                  ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`} 
+                />
+                <p className={`text-lg ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}>
+                  Loading your orders...
+                </p>
+              </motion.div>
+            ) : error ? (
+              <motion.div 
+                key="error"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`rounded-2xl backdrop-blur-lg border overflow-hidden p-8 text-center
+                  ${isDarkTheme 
+                    ? 'bg-red-900/20 border-red-800/30' 
+                    : 'bg-red-50 border-red-100'
+                  }`}
+              >
+                <AlertCircle className={`h-16 w-16 mx-auto mb-4 
+                  ${isDarkTheme ? 'text-red-400' : 'text-red-500'}`} 
+                />
+                <h3 className={`text-xl font-medium mb-2 
+                  ${isDarkTheme ? 'text-red-400' : 'text-red-600'}`}>
+                  Error Loading Orders
+                </h3>
+                <p className={`mb-6 max-w-md mx-auto
+                  ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}>
+                  {error}
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={fetchOrders}
+                  className={`px-6 py-3 rounded-full text-sm font-medium transition-all
+                    ${isDarkTheme 
+                      ? 'bg-white text-black hover:bg-white/90' 
+                      : 'bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]/90'
+                    }`}
+                >
+                  Try Again
+                </motion.button>
+              </motion.div>
+            ) : selectedOrder ? (
+              <OrderDetails 
+                order={selectedOrder} 
+                isDarkTheme={isDarkTheme}
+                formatDate={formatDate}
+                getStatusInfo={getStatusInfo}
+              />
+            ) : (
+              <motion.div 
+                key="orders-list"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {groupedOrders.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className={`rounded-2xl backdrop-blur-lg border overflow-hidden p-8 text-center
+                      ${isDarkTheme 
+                        ? 'bg-white/5 border-white/10' 
+                        : 'bg-white/80 border-black/5 shadow-lg'
+                      }`}
+                  >
+                    <div className="absolute -left-20 -top-20 h-40 w-40 rounded-full blur-3xl opacity-10 bg-blue-500" />
+                    <div className="absolute -right-20 -bottom-20 h-40 w-40 rounded-full blur-3xl opacity-10 bg-purple-500" />
+                    
+                    <div className="relative z-10">
+                      <ClipboardList className={`h-16 w-16 mx-auto mb-4 
+                        ${isDarkTheme ? 'text-white/40' : 'text-black/40'}`} 
+                      />
+                      <h3 className="text-2xl font-medium mb-3">No Orders Found</h3>
+                      <p className={`mb-8 max-w-md mx-auto
+                        ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}>
+                        You haven't placed any print orders yet. Start by uploading documents for printing.
+                      </p>
+                      <Link 
+                        to="/print-page"
+                        className={`inline-flex items-center space-x-2 px-6 py-3 rounded-full text-base font-medium transition-all
+                          ${isDarkTheme 
+                            ? 'bg-white text-black hover:bg-white/90' 
+                            : 'bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]/90'
+                          }`}
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Create Your First Order
+                      </Link>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groupedOrders.map((orderGroup, groupIndex) => {
+                      // Get the first order in the group (they all have the same creation time and shop)
+                      const firstOrder = orderGroup[0];
+                      const groupStatus = getGroupStatus(orderGroup);
+                      const isPriority = isGroupPriority(orderGroup);
+                      const statusInfo = getStatusInfo(groupStatus);
+                      
+                      return (
+                        <motion.div
+                          key={groupIndex}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: groupIndex * 0.05 }}
+                          whileHover={{ 
+                            y: -8,
+                            transition: { type: "spring", stiffness: 400, damping: 10 }
+                          }}
+                          onClick={() => setSelectedOrder(firstOrder)}
+                          className={`relative overflow-hidden rounded-2xl p-6 cursor-pointer transition-all border backdrop-blur-lg
+                            ${isPriority 
+                              ? isDarkTheme 
+                                ? 'bg-amber-900/20 border-amber-800/30 hover:border-amber-700/40' 
+                                : 'bg-amber-50 hover:bg-amber-100/80 border-amber-200'
+                              : isDarkTheme 
+                                ? 'bg-white/5 border-white/10 hover:border-white/20' 
+                                : 'bg-white/80 hover:bg-white border-black/5 shadow-lg'
+                            }`}
+                        >
+                          {/* Glassmorphic decorative elements */}
+                          {isPriority ? (
+                            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full blur-lg opacity-20 bg-amber-500" />
+                          ) : (
+                            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full blur-lg opacity-10 bg-gradient-to-br from-blue-400 to-purple-400" />
+                          )}
+                          
+                          <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <h3 className="font-medium text-lg mb-1">
+                                  Order #{firstOrder._id.substring(firstOrder._id.length - 6)}
+                                </h3>
+                                <p className={`text-sm 
+                                  ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}
+                                >
+                                  {orderGroup.length} {orderGroup.length === 1 ? 'file' : 'files'}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {isPriority && (
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium
+                                    ${isDarkTheme 
+                                      ? 'bg-amber-400/10 text-amber-300 border border-amber-400/20' 
+                                      : 'bg-amber-100 text-amber-700 border border-amber-200'
+                                    }`}
+                                  >
+                                    Priority
+                                  </span>
+                                )}
+                                <div className={`flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                  ${statusInfo.color} ${statusInfo.bg} border ${statusInfo.border}`}
+                                >
+                                  {statusInfo.icon}
+                                  <span className="ml-1.5">{statusInfo.label}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className={`mb-4 pb-4 border-b 
+                              ${isDarkTheme ? 'border-white/10' : 'border-black/10'}`}
+                            >
+                              <div className="flex items-center mb-2">
+                                <Printer className={`h-4 w-4 mr-2 
+                                  ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} 
+                                />
+                                <span className={`text-sm 
+                                  ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
+                                >
+                                  {firstOrder.printConfig.copies} {firstOrder.printConfig.copies > 1 ? 'copies' : 'copy'}, {' '}
+                                  {firstOrder.printConfig.colorMode === 'blackAndWhite' ? 'B&W' : 'Color'}, {' '}
+                                  {firstOrder.printConfig.pageSize}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center">
+                                <Calendar className={`h-4 w-4 mr-2 
+                                  ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} 
+                                />
+                                <span className={`text-sm 
+                                  ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
+                                >
+                                  {formatDate(firstOrder.createdAt)}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* File List Preview */}
+                            <div className="mb-4 max-h-24 overflow-y-auto">
+                              <p className={`text-xs font-medium mb-1.5 
+                                ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
+                              >
+                                Files
+                              </p>
+                              <ul className={`text-xs space-y-1.5 
+                                ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}
+                              >
+                                {orderGroup.map((order, i) => (
+                                  <li key={i} className="truncate flex items-center">
+                                    <FileText className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                                    {order.file.originalName}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center text-sm">
+                                <MapPin className={`h-4 w-4 mr-1.5 
+                                  ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} 
+                                />
+                                {firstOrder.shopkeeperId ? (
+                                  <span>{firstOrder.shopkeeperId.name}</span>
+                                ) : (
+                                  <span className={isDarkTheme ? 'text-white/50' : 'text-black/50'}>
+                                    No shop assigned
+                                  </span>
+                                )}
+                              </div>
+                              <motion.div 
+                                whileHover={{ x: 3 }}
+                                className={`text-sm flex items-center 
+                                  ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`}
+                              >
+                                View Details
+                                <ChevronRight className="h-4 w-4 ml-0.5" />
+                              </motion.div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -590,136 +840,104 @@ const OrdersPage: React.FC = () => {
 interface OrderDetailsProps {
   order: Order;
   isDarkTheme: boolean;
+  formatDate: (dateString: string) => string;
+  getStatusInfo: (status: string) => {
+    icon: JSX.Element;
+    color: string;
+    bg: string;
+    border: string;
+    label: string;
+  };
 }
 
-const OrderDetails: React.FC<OrderDetailsProps> = ({ order, isDarkTheme }) => {
+const OrderDetails: React.FC<OrderDetailsProps> = ({ 
+  order, 
+  isDarkTheme,
+  formatDate,
+  getStatusInfo
+}) => {
   const statusInfo = getStatusInfo(order.status);
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Pending';
-    
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-    }).format(date);
-  };
-  
-  // Helper function for status icons and colors
-  function getStatusInfo(status: string) {
-    switch (status) {
-      case 'completed':
-        return { 
-          icon: <CheckSquare className="h-5 w-5" />, 
-          color: 'text-green-500',
-          label: 'Completed',
-          bgColor: isDarkTheme ? 'bg-green-900/20' : 'bg-green-100'
-        };
-      case 'processing':
-        return { 
-          icon: <RefreshCw className="h-5 w-5" />, 
-          color: 'text-blue-500',
-          label: 'Processing',
-          bgColor: isDarkTheme ? 'bg-blue-900/20' : 'bg-blue-100'
-        };
-      case 'failed':
-        return { 
-          icon: <AlertCircle className="h-5 w-5" />, 
-          color: 'text-red-500',
-          label: 'Failed',
-          bgColor: isDarkTheme ? 'bg-red-900/20' : 'bg-red-100'
-        };
-      case 'cancelled':
-        return { 
-          icon: <AlertCircle className="h-5 w-5" />, 
-          color: 'text-red-500',
-          label: 'Cancelled',
-          bgColor: isDarkTheme ? 'bg-red-900/20' : 'bg-red-100'
-        };
-      default:
-        return { 
-          icon: <Hourglass className="h-5 w-5" />, 
-          color: 'text-yellow-500',
-          label: 'Pending',
-          bgColor: isDarkTheme ? 'bg-yellow-900/20' : 'bg-yellow-100'
-        };
-    }
-  }
   
   // Steps for the order process
   const steps = [
     { 
       label: 'Order Placed', 
       date: order.timeline.created,
-      icon: <FileText className="h-6 w-6" />,
+      icon: <FileText className="h-5 w-5" />,
       completed: true
     },
     { 
       label: 'Payment', 
       date: order.timeline.paid,
-      icon: <FileText className="h-6 w-6" />,
+      icon: <CreditCard className="h-5 w-5" />,
       completed: !!order.timeline.paid
     },
     { 
       label: 'Processing', 
       date: order.timeline.processing,
-      icon: <RefreshCw className="h-6 w-6" />,
+      icon: <RefreshCw className="h-5 w-5" />,
       completed: !!order.timeline.processing
     },
     { 
       label: 'Ready for Pickup', 
       date: order.timeline.ready,
-      icon: <CheckSquare className="h-6 w-6" />,
+      icon: <Clock className="h-5 w-5" />,
       completed: !!order.timeline.ready
     },
     { 
       label: 'Completed', 
       date: order.timeline.completed,
-      icon: <CheckSquare className="h-6 w-6" />,
+      icon: <CheckSquare className="h-5 w-5" />,
       completed: !!order.timeline.completed
     }
   ];
   
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="space-y-8"
-    >
+    <div className="space-y-8">
       {/* Order Header */}
-      <div className={`p-6 rounded-lg ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className={`rounded-2xl overflow-hidden p-6 backdrop-blur-lg border
+          ${isDarkTheme 
+            ? 'bg-white/5 border-white/10' 
+            : 'bg-white/80 border-black/5 shadow-lg'
+          }`}
+      >
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold mb-1">Order #{order._id.substring(order._id.length - 6)}</h2>
-            <p className={`${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-              {new Date(order.createdAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+            <h2 className="text-2xl font-medium mb-1">Order #{order._id.substring(order._id.length - 6)}</h2>
+            <p className={`${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}>
+              {formatDate(order.createdAt)}
             </p>
           </div>
           
-          <div className={`flex items-center px-4 py-2 rounded-lg ${statusInfo.bgColor}`}>
+          <div className={`flex items-center px-4 py-2 rounded-full ${statusInfo.bg} border ${statusInfo.border}`}>
             <div className={`${statusInfo.color} mr-2`}>{statusInfo.icon}</div>
             <span className={`font-medium ${statusInfo.color}`}>{statusInfo.label}</span>
           </div>
         </div>
-      </div>
+      </motion.div>
       
       {/* Order Timeline Animation */}
-      <div className={`p-6 rounded-lg ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-        <h3 className="text-xl font-semibold mb-6">Order Progress</h3>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className={`rounded-2xl overflow-hidden p-6 backdrop-blur-lg border
+          ${isDarkTheme 
+            ? 'bg-white/5 border-white/10' 
+            : 'bg-white/80 border-black/5 shadow-lg'
+          }`}
+      >
+        <h3 className="text-xl font-medium mb-8">Order Progress</h3>
         
         <div className="relative">
           {/* Progress Line */}
-          <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-700 z-0"></div>
+          <div className={`absolute left-6 top-8 bottom-8 w-0.5 
+            ${isDarkTheme ? 'bg-white/10' : 'bg-black/10'} z-0`}
+          ></div>
           
           {/* Steps */}
           <div className="space-y-8 relative z-10">
@@ -731,32 +949,34 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, isDarkTheme }) => {
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: index * 0.1 + 0.2 }}
                   className="flex items-start"
                 >
                   <motion.div 
                     initial={isActive ? { scale: 0.5, opacity: 0 } : {}}
                     animate={isActive ? { scale: 1, opacity: 1 } : {}}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    className={`rounded-full p-3 z-10 mr-4 
-                      ${isActive 
-                        ? `${isDarkTheme ? 'bg-blue-700' : 'bg-blue-500'} text-white` 
-                        : `${isDarkTheme ? 'bg-gray-700' : 'bg-gray-300'}`}
-                    `}
+                    className={`rounded-full p-3 z-10 mr-5 ${isActive 
+                      ? isDarkTheme 
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                        : 'bg-blue-100 text-blue-600 border border-blue-200'
+                      : isDarkTheme 
+                        ? 'bg-white/10 text-white/30 border border-white/10' 
+                        : 'bg-black/5 text-black/30 border border-black/10'
+                    }`}
                   >
                     {step.icon}
                   </motion.div>
                   
-                  <div className="flex-1">
-                    <h4 className={`font-medium text-lg 
-                      ${isActive 
-                        ? isDarkTheme ? 'text-white' : 'text-black' 
-                        : isDarkTheme ? 'text-gray-400' : 'text-gray-500'
-                      }`}>
+                  <div className="pt-1.5">
+                    <h4 className={`font-medium ${isActive 
+                      ? isDarkTheme ? 'text-white' : 'text-black' 
+                      : isDarkTheme ? 'text-white/40' : 'text-black/40'
+                    }`}>
                       {step.label}
                     </h4>
-                    <p className={`${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {formatDate(step.date || '')}
+                    <p className={`text-sm mt-0.5 ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}>
+                      {step.date ? formatDate(step.date) : 'Pending'}
                     </p>
                   </div>
                 </motion.div>
@@ -764,117 +984,161 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, isDarkTheme }) => {
             })}
           </div>
         </div>
-      </div>
+      </motion.div>
       
-      {/* Order Details */}
+      {/* Document & Payment Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Document Details */}
-        <div className={`p-6 rounded-lg ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-          <h3 className="text-xl font-semibold mb-4">Document Details</h3>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className={`rounded-2xl overflow-hidden p-6 backdrop-blur-lg border
+            ${isDarkTheme 
+              ? 'bg-white/5 border-white/10' 
+              : 'bg-white/80 border-black/5 shadow-lg'
+            }`}
+        >
+          <h3 className="text-xl font-medium mb-6">Document Details</h3>
           
-          <div className={`space-y-3 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
-            <div className="flex justify-between">
-              <span className="font-medium">File Name:</span>
-              <span className="max-w-[200px] truncate">{order.file.originalName}</span>
+          <div className={`space-y-4 ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>
+            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+              <div className="flex items-start mb-2">
+                <FileText className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">File Name</p>
+                  <p className="text-sm break-words">{order.file.originalName}</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <Calendar className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">Upload Date</p>
+                  <p className="text-sm">{formatDate(order.file.uploadDate)}</p>
+                </div>
+              </div>
             </div>
             
-            <div className="flex justify-between">
-              <span className="font-medium">Upload Date:</span>
-              <span>{formatDate(order.file.uploadDate)}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Color Mode:</span>
-              <span>
-                {order.printConfig.colorMode === 'blackAndWhite' ? 'Black & White' : 'Color'}
-              </span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Paper Size:</span>
-              <span>{order.printConfig.pageSize}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Orientation:</span>
-              <span className="capitalize">{order.printConfig.orientation}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Double-sided:</span>
-              <span>{order.printConfig.duplexPrinting ? 'Yes' : 'No'}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Pages:</span>
-              <span>{order.printConfig.pageRange}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Copies:</span>
-              <span>{order.printConfig.copies}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Pages Per Sheet:</span>
-              <span>{order.printConfig.pagesPerSheet}</span>
+            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+              <h4 className="text-sm font-medium mb-3">Print Configuration</h4>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Color Mode</p>
+                  <p className="font-medium">
+                    {order.printConfig.colorMode === 'blackAndWhite' ? 'Black & White' : 'Color'}
+                  </p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Paper Size</p>
+                  <p className="font-medium">{order.printConfig.pageSize}</p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Orientation</p>
+                  <p className="font-medium capitalize">{order.printConfig.orientation}</p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Double-sided</p>
+                  <p className="font-medium">{order.printConfig.duplexPrinting ? 'Yes' : 'No'}</p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages</p>
+                  <p className="font-medium">{order.printConfig.pageRange}</p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Copies</p>
+                  <p className="font-medium">{order.printConfig.copies}</p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages Per Sheet</p>
+                  <p className="font-medium">{order.printConfig.pagesPerSheet}</p>
+                </div>
+                <div>
+                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Priority</p>
+                  <p className="font-medium">{order.printConfig.isPriority ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
         
         {/* Shop and Payment Details */}
-        <div className={`p-6 rounded-lg ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-          <h3 className="text-xl font-semibold mb-4">Shop & Payment Details</h3>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className={`rounded-2xl overflow-hidden p-6 backdrop-blur-lg border
+            ${isDarkTheme 
+              ? 'bg-white/5 border-white/10' 
+              : 'bg-white/80 border-black/5 shadow-lg'
+            }`}
+        >
+          <h3 className="text-xl font-medium mb-6">Shop & Payment Details</h3>
           
           {order.shopkeeperId ? (
             <div className="mb-6">
-              <h4 className="font-medium mb-2">Print Shop</h4>
-              <div className={`p-4 rounded-lg ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <p className="text-lg font-medium mb-1">{order.shopkeeperId.name}</p>
-                <address className={`not-italic ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {order.shopkeeperId.address.street}<br />
-                  {order.shopkeeperId.address.city}, {order.shopkeeperId.address.state} {order.shopkeeperId.address.pincode}<br />
-                  {order.shopkeeperId.address.country}
-                </address>
+              <h4 className="text-sm font-medium mb-3">Print Shop</h4>
+              <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+                <div className="flex items-start">
+                  <MapPin className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
+                  <div>
+                    <p className="font-medium mb-1">{order.shopkeeperId.name}</p>
+                    <address className={`not-italic text-sm ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}>
+                      {order.shopkeeperId.address.street}<br />
+                      {order.shopkeeperId.address.city}, {order.shopkeeperId.address.state} {order.shopkeeperId.address.pincode}<br />
+                      {order.shopkeeperId.address.country}
+                    </address>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
             <div className="mb-6">
-              <h4 className="font-medium mb-2">Print Shop</h4>
-              <div className={`p-4 rounded-lg ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <p className="text-lg italic">No shop assigned</p>
+              <h4 className="text-sm font-medium mb-3">Print Shop</h4>
+              <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+                <p className="italic text-center">No shop assigned</p>
               </div>
             </div>
           )}
           
           <div>
-            <h4 className="font-medium mb-2">Payment Information</h4>
-            <div className={`p-4 rounded-lg ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <div className="flex justify-between mb-2">
-                <span>Payment Method:</span>
-                <span className="capitalize">{order.payment.method}</span>
+            <h4 className="text-sm font-medium mb-3">Payment Information</h4>
+            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+              <div className="flex items-start mb-4">
+                <CreditCard className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
+                <div className="flex-1">
+                  <div className="flex justify-between mb-2">
+                    <p className="text-sm font-medium">Payment Method</p>
+                    <p className="text-sm capitalize">{order.payment.method}</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p className="text-sm font-medium">Payment Status</p>
+                    <span className={`text-sm capitalize font-medium px-2 py-0.5 rounded-full
+                      ${order.payment.status === 'completed' 
+                        ? isDarkTheme ? 'bg-green-500/10 text-green-400' : 'bg-green-100 text-green-700'
+                        : order.payment.status === 'pending'
+                          ? isDarkTheme ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100 text-amber-700'
+                          : isDarkTheme ? 'bg-red-500/10 text-red-400' : 'bg-red-100 text-red-700'
+                      }`}>
+                      {order.payment.status}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between mb-2">
-                <span>Payment Status:</span>
-                <span className={`capitalize font-medium 
-                  ${order.payment.status === 'completed' 
-                    ? 'text-green-500' 
-                    : order.payment.status === 'pending' 
-                      ? 'text-yellow-500' 
-                      : 'text-red-500'
-                  }`}>
-                  {order.payment.status}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Delivery Method:</span>
-                <span className="capitalize">{order.deliveryMethod}</span>
+              
+              <div className="flex items-start">
+                <User className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
+                <div className="flex-1">
+                  <div className="flex justify-between">
+                    <p className="text-sm font-medium">Delivery Method</p>
+                    <p className="text-sm capitalize">{order.deliveryMethod}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

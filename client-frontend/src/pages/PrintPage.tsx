@@ -3,17 +3,21 @@ import { useUser, SignedIn, useClerk } from '@clerk/clerk-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Printer, 
-  Lock, 
+  Lock,
   Sun, 
   Moon, 
   LogOut, 
   FileText, 
   Settings, 
   CreditCard,
-  ClipboardList
+  ClipboardList,
+  ChevronRight,
+  Upload,
+  AlertCircle,
+  Clock,
+  Check
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import CryptoJS from 'crypto-js';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 // Component Imports
 import { FileUploader } from '../components/FileUploader';
@@ -36,7 +40,7 @@ const defaultPrintOptions: PrintOptions = {
   doubleSided: false,
   copies: 1,
   paperType: 'Standard',
-  isPriority: false, // Add this line
+  isPriority: false,
 };
 
 interface Shopkeeper {
@@ -46,7 +50,7 @@ interface Shopkeeper {
     blackAndWhite: number;
     color: number;
   };
-  priorityRate: number; // Add this line
+  priorityRate: number;
   discountRules: Array<{
     discountPercentage: number;
     minimumOrderAmount: number;
@@ -64,7 +68,7 @@ interface Shopkeeper {
 }
 
 function PrintPage() {
-  // Persistent theme state with localStorage
+  // Theme state with localStorage
   const [isDarkTheme, setIsDarkTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || 
@@ -77,14 +81,19 @@ function PrintPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedShopkeeper, setSelectedShopkeeper] = useState<Shopkeeper | null>(null);
-  const [isPriorityOrder, setIsPriorityOrder] = useState(false); // Add new state for global priority
+  const [isPriorityOrder, setIsPriorityOrder] = useState(false);
+  const [uploadHovered, setUploadHovered] = useState(false);
 
   // Clerk User Context
   const { user } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  
+  // Scroll animations
+  const { scrollYProgress } = useScroll();
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0.9]);
 
-  // Apply dark mode to entire document and localStorage
+  // Apply theme to document and localStorage
   useEffect(() => {
     if (isDarkTheme) {
       document.documentElement.classList.add('dark');
@@ -94,21 +103,6 @@ function PrintPage() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkTheme]);
-
-  // System preference change listener
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = (e) => {
-      // Only change theme if user hasn't manually set a preference
-      if (localStorage.getItem('theme') === null) {
-        setIsDarkTheme(e.matches);
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   // File Processing Handler
   const handleFilesAdded = useCallback(async (newFiles: File[]) => {
@@ -292,153 +286,462 @@ function PrintPage() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className={`min-h-screen transition-colors duration-500 
-        ${isDarkTheme 
-          ? 'bg-[#121212] text-white' 
-          : 'bg-white text-black'
-        }`}
+    <div className={`min-h-screen font-sans transition-colors duration-500 
+      ${isDarkTheme 
+        ? 'bg-[#0a0a0a] text-white' 
+        : 'bg-[#f5f5f7] text-[#1d1d1f]'
+      }`}
     >
-      {/* Navigation */}
+      {/* Glassmorphic Navigation */}
       <motion.nav 
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className={`fixed top-0 left-0 right-0 z-50 
+        style={{ opacity: headerOpacity }}
+        className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl
           ${isDarkTheme 
-            ? 'bg-black/80 text-white' 
-            : 'bg-white/80 text-black'
-          } backdrop-blur-lg shadow-sm`}
+            ? 'bg-black/30 border-b border-white/5' 
+            : 'bg-white/30 border-b border-black/5'
+          }`}
       >
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Printer className={`h-8 w-8 ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`} />
-            <h1 className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-black'}`}>PrintEasy</h1>
-          </div>
+        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+          <Link to="/">
+            <motion.div 
+              className="flex items-center space-x-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Printer className={`h-7 w-7 ${isDarkTheme ? 'text-white' : 'text-[#1d1d1f]'}`} />
+              <h1 className="text-xl font-medium tracking-tight">PrintEasy</h1>
+            </motion.div>
+          </Link>
           
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-8">
             {user && (
-              <div className="flex items-center space-x-4">
-                <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-black'}`}>
-                  Hi, {user.firstName || user.username}
-                </div>
+              <div className="flex items-center space-x-6">
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`text-sm font-medium px-4 py-2 rounded-full
+                    ${isDarkTheme ? 'bg-white/10' : 'bg-black/5'}`}>
+                  Hello, {user.firstName || user.username}
+                </motion.div>
+                
+                <Link
+                  to="/orders"
+                  className={`hidden md:flex items-center space-x-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all
+                    ${isDarkTheme 
+                      ? 'bg-white/10 hover:bg-white/20' 
+                      : 'bg-black/5 hover:bg-black/10'
+                    }`}
+                >
+                  <span>My Orders</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+                
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
-                  className="px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  className={`p-2.5 rounded-full transition-all
+                    ${isDarkTheme 
+                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                      : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                    }`}
                 >
                   <LogOut className="h-5 w-5" />
                 </motion.button>
-                <Link 
-                  to="/orders"
-                  className={`px-4 py-2 rounded-full transition-colors
-                    ${isDarkTheme 
-                      ? 'bg-gray-800 text-white hover:bg-gray-700' 
-                      : 'bg-gray-100 text-black hover:bg-gray-200'
-                    }`}
-                >
-                  <ClipboardList className="h-5 w-5" />
-                </Link>
               </div>
             )}
 
             <motion.button
               whileHover={{ rotate: 15 }}
-              whileTap={{ rotate: -15 }}
+              whileTap={{ scale: 0.9 }}
               onClick={toggleTheme}
-              className={`p-2 rounded-full transition-colors 
+              className={`p-2.5 rounded-full transition-all
                 ${isDarkTheme 
-                  ? 'bg-gray-800 text-white hover:bg-gray-700' 
-                  : 'bg-gray-100 text-black hover:bg-gray-200'
+                  ? 'bg-white/10 hover:bg-white/20' 
+                  : 'bg-black/5 hover:bg-black/10'
                 }`}
             >
-              {isDarkTheme ? <Sun className="h-6 w-6" /> : <Moon className="h-6 w-6" />}
+              {isDarkTheme 
+                ? <Sun className="h-5 w-5 text-yellow-300" /> 
+                : <Moon className="h-5 w-5 text-blue-700" />
+              }
             </motion.button>
           </div>
         </div>
       </motion.nav>
 
       {/* Main Content */}
-      <div className={`pt-24 min-h-screen
-        ${isDarkTheme ? 'bg-[#121212] text-white' : 'bg-white text-black'}`}>
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {/* Existing print page content goes here, maintaining the previous implementation */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <ShopkeeperSelector
-                onSelect={setSelectedShopkeeper}
-                isDarkTheme={isDarkTheme}
-              />
-              
-              <div className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}>
-                <FileUploader
-                  onFilesAdded={handleFilesAdded}
-                  files={files}
-                  onRemoveFile={handleRemoveFile}
-                  isDarkTheme={isDarkTheme}
-                />
-              </div>
-
-              {/* Existing file handling sections */}
-              {files.map((file) => (
-                <div
-                  key={file.id}
-                  className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}
-                >
-                  {/* File details and options sections */}
-                  <PageSelector
-                    pageCount={file.pageCount}
-                    value={file.selectedPages}
-                    onChange={(pages) => handlePageSelection(file.id, pages)}
+      <div className="pt-32 pb-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className={`text-3xl md:text-4xl font-medium mb-2 tracking-tight text-center
+              ${isDarkTheme ? 'text-white' : 'text-[#1d1d1f]'}`}
+          >
+            Perfect Prints. Precise Control.
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className={`text-lg text-center max-w-3xl mx-auto mb-16
+              ${isDarkTheme ? 'text-white/70' : 'text-[#1d1d1f]/70'}`}
+          >
+            Configure your documents with premium options for exceptional results.
+          </motion.p>
+          
+          {/* Error alert */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className={`mb-6 p-4 rounded-xl flex items-start space-x-3
+                  ${isDarkTheme 
+                    ? 'bg-red-900/30 border border-red-800/50 text-red-200' 
+                    : 'bg-red-50 border border-red-100 text-red-800'
+                  }`}
+              >
+                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium">An error occurred</h3>
+                  <p className={`text-sm ${isDarkTheme ? 'text-red-300/80' : 'text-red-700/80'}`}>{error}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Main grid layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left column - Upload and configuration */}
+            <div className="lg:col-span-8 space-y-8">
+              {/* Shop selection */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className={`rounded-2xl overflow-hidden backdrop-blur-lg border
+                  ${isDarkTheme 
+                    ? 'bg-white/5 border-white/10' 
+                    : 'bg-white/80 border-black/5 shadow-lg'
+                  }`}
+              >
+                <div className="p-6">
+                  <h2 className="text-xl font-medium mb-6">Select Print Shop</h2>
+                  <ShopkeeperSelector
+                    onSelect={setSelectedShopkeeper}
                     isDarkTheme={isDarkTheme}
-                  />
-                  <PrintOptionsForm
-                    options={file.options}
-                    onChange={(options) => handleOptionsChange(file.id, options)}
-                    isDarkTheme={isDarkTheme}
-                    shopkeeper={selectedShopkeeper} // Add this line
                   />
                 </div>
-              ))}
-            </div>
-
-            {/* Checkout Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-4">
-                <PriceCalculator 
-                  files={files} 
-                  isDarkTheme={isDarkTheme}
-                  shopkeeper={selectedShopkeeper}
-                  isPriority={isPriorityOrder}
-                  onPriorityChange={setIsPriorityOrder}
-                />
+              </motion.div>
+              
+              {/* File Upload Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className={`rounded-2xl overflow-hidden backdrop-blur-lg border relative
+                  ${isDarkTheme 
+                    ? 'bg-white/5 border-white/10' 
+                    : 'bg-white/80 border-black/5 shadow-lg'
+                  }`}
+                onMouseEnter={() => setUploadHovered(true)}
+                onMouseLeave={() => setUploadHovered(false)}
+              >
+                {/* Glassmorphic decorative elements */}
+                <div className="absolute -left-20 -top-20 h-40 w-40 rounded-full blur-3xl opacity-10 bg-blue-500" />
+                <div className="absolute -right-20 -bottom-20 h-40 w-40 rounded-full blur-3xl opacity-10 bg-purple-500" />
                 
-                <button
-                  onClick={handleCheckout}
-                  disabled={files.length === 0 || isProcessing}
-                  className={`w-full flex items-center justify-center space-x-2 px-6 py-4 rounded-full text-lg transition-colors
-                    ${
-                      files.length === 0 || isProcessing
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : `${isDarkTheme 
-                            ? 'bg-blue-700 text-white hover:bg-blue-600' 
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                          }`
+                <div className="p-6 relative z-10">
+                  <h2 className="text-xl font-medium mb-6">Upload Documents</h2>
+                  <FileUploader
+                    onFilesAdded={handleFilesAdded}
+                    files={files}
+                    onRemoveFile={handleRemoveFile}
+                    isDarkTheme={isDarkTheme}
+                  />
+                </div>
+                
+                {/* Floating action button for upload (visible on hover) */}
+                <AnimatePresence>
+                  {uploadHovered && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="absolute bottom-6 right-6"
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <button
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all
+                          ${isDarkTheme 
+                            ? 'bg-white text-black hover:bg-white/90' 
+                            : 'bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]/90'
+                          }`}
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>Add More</span>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+              
+              {/* File configurations */}
+              {files.map((file, index) => (
+                <motion.div
+                  key={file.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 + (index * 0.1) }}
+                  className={`rounded-2xl overflow-hidden backdrop-blur-lg border
+                    ${isDarkTheme 
+                      ? 'bg-white/5 border-white/10' 
+                      : 'bg-white/80 border-black/5 shadow-lg'
                     }`}
                 >
-                  <Lock className="h-6 w-6 mr-2" />
-                  Proceed to Checkout
-                </button>
-              </div>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-full ${isDarkTheme ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                          <FileText className={`h-5 w-5 ${isDarkTheme ? 'text-blue-300' : 'text-blue-600'}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-lg">{file.file.name}</h3>
+                          <p className={`text-sm ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}>
+                            {file.pageCount} pages • {Math.round(file.file.size / 1024)} KB
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleRemoveFile(file.id)}
+                        className={`p-1.5 rounded-full transition-colors
+                          ${isDarkTheme 
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                            : 'bg-red-100 text-red-500 hover:bg-red-200'
+                          }`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 6L6 18M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div className={`p-4 rounded-xl mb-4 
+                      ${isDarkTheme ? 'bg-black/30' : 'bg-gray-50'}`}>
+                      {/* File preview/thumbnail would go here */}
+                      {file.thumbnail && (
+                        <img 
+                          src={file.thumbnail} 
+                          alt={`Preview of ${file.file.name}`}
+                          className="h-32 mx-auto object-contain rounded-lg"
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Page selector and print options sections */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div>
+                        <h4 className={`text-sm font-medium mb-3 ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>
+                          Page Selection
+                        </h4>
+                        <PageSelector
+                          pageCount={file.pageCount}
+                          value={file.selectedPages}
+                          onChange={(pages) => handlePageSelection(file.id, pages)}
+                          isDarkTheme={isDarkTheme}
+                        />
+                      </div>
+                      
+                      <div>
+                        <h4 className={`text-sm font-medium mb-3 ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>
+                          Print Options
+                        </h4>
+                        <PrintOptionsForm
+                          options={file.options}
+                          onChange={(options) => handleOptionsChange(file.id, options)}
+                          isDarkTheme={isDarkTheme}
+                          shopkeeper={selectedShopkeeper}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className={`mt-4 p-3 rounded-xl text-sm font-medium
+                      ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span>Subtotal for this document:</span>
+                        <span className={`${isDarkTheme ? 'text-blue-300' : 'text-blue-600'}`}>
+                          ${file.price.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+              
+              {files.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`rounded-2xl p-4 text-center
+                    ${isDarkTheme 
+                      ? 'bg-white/5 border border-white/10' 
+                      : 'bg-white/80 border border-black/5 shadow-md'
+                    }`}
+                >
+                  <button
+                    onClick={applyGlobalOptions}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all
+                      ${isDarkTheme 
+                        ? 'bg-white/10 hover:bg-white/20' 
+                        : 'bg-black/5 hover:bg-black/10'
+                      }`}
+                  >
+                    Apply Global Options to All Files
+                  </button>
+                </motion.div>
+              )}
+            </div>
+            
+            {/* Right column - Checkout card */}
+            <div className="lg:col-span-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="sticky top-24"
+              >
+                <div className={`rounded-2xl overflow-hidden backdrop-blur-lg border
+                  ${isDarkTheme 
+                    ? 'bg-white/5 border-white/10' 
+                    : 'bg-white/80 border-black/5 shadow-lg'
+                  }`}
+                >
+                  <div className="p-6">
+                    <h2 className="text-xl font-medium mb-4">Order Summary</h2>
+                    
+                    {/* Order summary */}
+                    <div className="space-y-3 mb-6">
+                      <div className="flex justify-between items-center">
+                        <span className={`${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}>
+                          Documents
+                        </span>
+                        <span className="font-medium">{files.length}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className={`${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}>
+                          Total Pages
+                        </span>
+                        <span className="font-medium">
+                          {files.reduce((count, file) => {
+                            // Simplified calculation - in reality would need to parse the selected pages string
+                            return count + file.pageCount;
+                          }, 0)}
+                        </span>
+                      </div>
+                      
+                      {selectedShopkeeper && (
+                        <div className="flex justify-between items-center">
+                          <span className={`${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}>
+                            Print Shop
+                          </span>
+                          <span className="font-medium">{selectedShopkeeper.name}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Price calculator component */}
+                    <PriceCalculator 
+                      files={files} 
+                      isDarkTheme={isDarkTheme}
+                      shopkeeper={selectedShopkeeper}
+                      isPriority={isPriorityOrder}
+                      onPriorityChange={setIsPriorityOrder}
+                    />
+                    
+                    {/* Priority option */}
+                    <div className={`mt-6 mb-8 p-4 rounded-xl 
+                      ${isDarkTheme ? 'bg-amber-900/20 border border-amber-800/30' : 'bg-amber-50 border border-amber-100'}`}
+                    >
+                      <div className="flex items-start">
+                        <div className={`p-1.5 rounded-full mt-0.5 mr-3
+                          ${isDarkTheme ? 'bg-amber-500/20' : 'bg-amber-100'}`}
+                        >
+                          <Clock className={`h-4 w-4 ${isDarkTheme ? 'text-amber-300' : 'text-amber-600'}`} />
+                        </div>
+                        <div>
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isPriorityOrder}
+                              onChange={(e) => setIsPriorityOrder(e.target.checked)}
+                              className={`mr-2 h-4 w-4 rounded 
+                                ${isDarkTheme 
+                                  ? 'bg-white/10 border-white/30 checked:bg-amber-500 checked:border-amber-500' 
+                                  : 'bg-white border-gray-300 checked:bg-amber-500 checked:border-amber-500'
+                                }`}
+                            />
+                            <span className={`text-sm font-medium 
+                              ${isDarkTheme ? 'text-amber-300' : 'text-amber-800'}`}
+                            >
+                              Priority Processing
+                            </span>
+                          </label>
+                          <p className={`text-xs mt-1 
+                            ${isDarkTheme ? 'text-amber-300/70' : 'text-amber-700/80'}`}
+                          >
+                            Get your order processed with highest priority. Extra fee applies.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Checkout button */}
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleCheckout}
+                      disabled={files.length === 0 || isProcessing || !selectedShopkeeper}
+                      className={`w-full flex items-center justify-center space-x-2 px-6 py-4 rounded-full text-base font-medium transition-all
+                        ${files.length === 0 || isProcessing || !selectedShopkeeper
+                          ? `${isDarkTheme ? 'bg-white/20 text-white/50' : 'bg-black/20 text-black/50'} cursor-not-allowed`
+                          : isDarkTheme 
+                            ? 'bg-white text-black hover:bg-white/90' 
+                            : 'bg-[#1d1d1f] text-white hover:bg-[#1d1d1f]/90'
+                        }`}
+                    >
+                      <Lock className="h-5 w-5 mr-2" />
+                      {isProcessing ? 'Processing...' : 'Proceed to Checkout'}
+                    </motion.button>
+                    
+                    {(files.length === 0 || !selectedShopkeeper) && (
+                      <p className={`text-xs text-center mt-2
+                        ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}
+                      >
+                        {files.length === 0 
+                          ? 'Please upload at least one document'
+                          : !selectedShopkeeper
+                            ? 'Select a print shop to continue'
+                            : ''
+                        }
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
