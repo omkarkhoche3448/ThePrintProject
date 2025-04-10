@@ -1,0 +1,59 @@
+{
+  "name": "xerox-dashboard",
+  "version": "1.0.0",
+  "description": "Xerox Shop Dashboard built with Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"webpack --watch\" \"electron .\"",
+    "build": "webpack --mode production && electron-builder",
+    "rebuild": "electron-rebuild"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "@electron/rebuild": "^3.7.1",
+    "babel-loader": "^10.0.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "css-loader": "^7.1.2",
+    "electron-builder": "^26.0.12",
+    "style-loader": "^4.0.0",
+    "wait-on": "^8.0.3",
+    "webpack": "^5.99.5",
+    "webpack-cli": "^6.0.1"
+  },
+  "build": {
+    "appId": "com.xerox.dashboard",
+    "productName": "Xerox Dashboard",
+    "directories": {
+      "output": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "dependencies": {
+    "electron": "^35.1.5",
+    "electron-store": "^10.0.1",
+    "react": "^18.3.1",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-dom": "^19.1.0"
+  }
+}
