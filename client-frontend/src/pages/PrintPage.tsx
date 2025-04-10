@@ -19,6 +19,7 @@ import { FileUploader } from '../components/FileUploader';
 import { PageSelector } from '../components/PageSelector';
 import { PrintOptionsForm } from '../components/PrintOptionsForm';
 import { PriceCalculator } from '../components/PriceCalculator';
+import { ShopkeeperSelector } from '../components/ShopkeeperSelector';
 
 // Utility Imports
 import { getPageCount, generateThumbnail } from '../utils/pdfUtils';
@@ -34,7 +35,32 @@ const defaultPrintOptions: PrintOptions = {
   doubleSided: false,
   copies: 1,
   paperType: 'Standard',
+  isPriority: false, // Add this line
 };
+
+interface Shopkeeper {
+  _id: string;
+  name: string;
+  printCosts: {
+    blackAndWhite: number;
+    color: number;
+  };
+  priorityRate: number; // Add this line
+  discountRules: Array<{
+    discountPercentage: number;
+    minimumOrderAmount: number;
+  }>;
+  shopHours: {
+    [key: string]: { open: string; close: string };
+  };
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+}
 
 function PrintPage() {
   // Persistent theme state with localStorage
@@ -49,6 +75,8 @@ function PrintPage() {
   const [globalOptions, setGlobalOptions] = useState<PrintOptions>(defaultPrintOptions);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedShopkeeper, setSelectedShopkeeper] = useState<Shopkeeper | null>(null);
+  const [isPriorityOrder, setIsPriorityOrder] = useState(false); // Add new state for global priority
 
   // Clerk User Context
   const { user } = useUser();
@@ -98,7 +126,12 @@ function PrintPage() {
               selectedPages: `1-${pageCount}`,
               thumbnail,
               options: { ...globalOptions },
-              price: calculatePrice(pageCount, globalOptions, `1-${pageCount}`),
+              price: calculatePrice(
+                pageCount, 
+                globalOptions, 
+                `1-${pageCount}`,
+                selectedShopkeeper
+              ),
             };
           } catch (error) {
             throw new Error(`Error processing ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -112,7 +145,7 @@ function PrintPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [globalOptions]);
+  }, [globalOptions, selectedShopkeeper]);
 
   // File Removal Handler
   const handleRemoveFile = useCallback((id: string) => {
@@ -131,14 +164,15 @@ function PrintPage() {
           updatedFile.price = calculatePrice(
             file.pageCount,
             file.options,
-            pages
+            pages,
+            selectedShopkeeper
           );
           return updatedFile;
         }
         return file;
       })
     );
-  }, []);
+  }, [selectedShopkeeper]);
 
   // Individual File Options Handler
   const handleOptionsChange = useCallback((id: string, options: PrintOptions) => {
@@ -152,14 +186,15 @@ function PrintPage() {
           updatedFile.price = calculatePrice(
             file.pageCount,
             options,
-            file.selectedPages
+            file.selectedPages,
+            selectedShopkeeper
           );
           return updatedFile;
         }
         return file;
       })
     );
-  }, []);
+  }, [selectedShopkeeper]);
 
   // Global Options Change Handler
   const handleGlobalOptionsChange = useCallback((options: PrintOptions) => {
@@ -289,7 +324,11 @@ function PrintPage() {
           {/* Existing print page content goes here, maintaining the previous implementation */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              {/* File Upload Section */}
+              <ShopkeeperSelector
+                onSelect={setSelectedShopkeeper}
+                isDarkTheme={isDarkTheme}
+              />
+              
               <div className={`rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}>
                 <FileUploader
                   onFilesAdded={handleFilesAdded}
@@ -316,6 +355,7 @@ function PrintPage() {
                     options={file.options}
                     onChange={(options) => handleOptionsChange(file.id, options)}
                     isDarkTheme={isDarkTheme}
+                    shopkeeper={selectedShopkeeper} // Add this line
                   />
                 </div>
               ))}
@@ -324,7 +364,13 @@ function PrintPage() {
             {/* Checkout Sidebar */}
             <div className="lg:col-span-1">
               <div className="sticky top-24 space-y-4">
-                <PriceCalculator files={files} isDarkTheme={isDarkTheme} />
+                <PriceCalculator 
+                  files={files} 
+                  isDarkTheme={isDarkTheme}
+                  shopkeeper={selectedShopkeeper}
+                  isPriority={isPriorityOrder}
+                  onPriorityChange={setIsPriorityOrder}
+                />
                 
                 <button
                   onClick={handleCheckout}

@@ -1,13 +1,20 @@
-export type PaperSize = 'A4' | 'Letter' | 'Legal';
+export type PaperSize = 'A4' | 'A3' | 'Letter' | 'Legal';
 export type ColorMode = 'Color' | 'BlackAndWhite';
-export type PaperType = 'Standard' | 'Premium' | 'Recycled';
+export type Orientation = 'Portrait' | 'Landscape';
+export type PagesPerSheet = '1' | '2' | '4' | '6' | '9';
+export type BorderStyle = 'None' | 'Thin' | 'Medium' | 'Thick';
 
 export interface PrintOptions {
   paperSize: PaperSize;
   colorMode: ColorMode;
   doubleSided: boolean;
+  pagesPerSheet: PagesPerSheet;
+  orientation: Orientation;
+  borderStyle: BorderStyle;
+  pageRange: string;
   copies: number;
   paperType: PaperType;
+  isPriority: boolean;
 }
 
 export interface PrintFile {

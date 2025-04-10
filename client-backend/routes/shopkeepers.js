@@ -84,7 +84,8 @@ router.get('/:id/details', async (req, res) => {
  */
 router.get('/', async (req, res) => {
   try {
-    const shopkeepers = await Shopkeeper.find({}, 'name printCosts discountRules shopHours address');
+    const shopkeepers = await Shopkeeper.find({}, 
+      'name printCosts priorityRate discountRules shopHours address');
     return res.status(200).json({
       success: true,
       data: shopkeepers,

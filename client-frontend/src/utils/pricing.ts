@@ -1,18 +1,25 @@
 import type { PrintOptions } from '../types/print';
 
-const BASE_PRICES = {
-  BlackAndWhite: 0.10,
-  Color: 0.50,
-  Premium: 0.15,
-  Recycled: 0.05,
-  DoubleSided: -0.02,
-};
+interface Shopkeeper {
+  printCosts: {
+    blackAndWhite: number;
+    color: number;
+  };
+  priorityRate: number;
+  discountRules: Array<{
+    discountPercentage: number;
+    minimumOrderAmount: number;
+  }>;
+}
 
 export function calculatePrice(
   pageCount: number,
   options: PrintOptions,
-  selectedPages: string
+  selectedPages: string,
+  shopkeeper: Shopkeeper | null
 ): number {
+  if (!shopkeeper) return 0;
+
   // Calculate number of pages from selection
   const pages = selectedPages.split(',').reduce((count, range) => {
     if (range.includes('-')) {
@@ -22,19 +29,43 @@ export function calculatePrice(
     return count + 1;
   }, 0);
 
-  let pricePerPage = BASE_PRICES[options.colorMode];
+  // Get base price from shopkeeper's rates
+  let pricePerPage = options.colorMode === 'Color' 
+    ? shopkeeper.printCosts.color 
+    : shopkeeper.printCosts.blackAndWhite;
 
   // Add paper type premium
   if (options.paperType === 'Premium') {
-    pricePerPage += BASE_PRICES.Premium;
+    pricePerPage *= 1.2; // 20% premium for premium paper
   } else if (options.paperType === 'Recycled') {
-    pricePerPage += BASE_PRICES.Recycled;
+    pricePerPage *= 0.9; // 10% discount for recycled paper
   }
 
-  // Apply double-sided discount
+  // Apply double-sided discount if applicable
   if (options.doubleSided) {
-    pricePerPage += BASE_PRICES.DoubleSided;
+    pricePerPage *= 0.8; // 20% discount for double-sided
   }
 
-  return pages * pricePerPage * options.copies;
+  // Calculate base total
+  let totalPrice = pages * pricePerPage * options.copies;
+
+  // Apply priority rate only if priority is selected
+  if (options.isPriority) {
+    totalPrice *= shopkeeper.priorityRate;
+  }
+
+  // Apply applicable discount
+  const sortedDiscounts = [...shopkeeper.discountRules]
+    .sort((a, b) => b.minimumOrderAmount - a.minimumOrderAmount);
+
+  const applicableDiscount = sortedDiscounts.find(
+    rule => totalPrice >= rule.minimumOrderAmount
+  );
+
+  if (applicableDiscount) {
+    const discountAmount = (totalPrice * applicableDiscount.discountPercentage) / 100;
+    totalPrice -= discountAmount;
+  }
+
+  return Number(totalPrice.toFixed(2));
 }

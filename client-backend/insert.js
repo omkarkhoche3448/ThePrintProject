@@ -23,6 +23,7 @@ const sampleShopkeepers = [
       blackAndWhite: 2,
       color: 5
     },
+    priorityRate: 1.1, // Standard rate
     discountRules: [
       { discountPercentage: 10, minimumOrderAmount: 100 }
     ],
@@ -52,6 +53,7 @@ const sampleShopkeepers = [
       blackAndWhite: 1.5,
       color: 4.5
     },
+    priorityRate: 1.5, // Premium rate
     discountRules: [
       { discountPercentage: 5, minimumOrderAmount: 50 },
       { discountPercentage: 15, minimumOrderAmount: 200 }
@@ -66,17 +68,54 @@ const sampleShopkeepers = [
       sunday: { open: "Closed", close: "Closed" }
     },
     active: true
+  },
+  {
+    name: "Quick Prints",
+    email: "quick@example.com",
+    phoneNumber: "9898989898",
+    address: {
+      street: "789 Tech Park",
+      city: "Bangalore",
+      state: "Karnataka",
+      pincode: "560001",
+      country: "India"
+    },
+    printCosts: {
+      blackAndWhite: 3,
+      color: 6
+    },
+    priorityRate: 2.0, // Premium express rate
+    discountRules: [
+      { discountPercentage: 20, minimumOrderAmount: 300 }
+    ],
+    shopHours: {
+      monday: { open: "00:00", close: "23:59" },
+      tuesday: { open: "00:00", close: "23:59" },
+      wednesday: { open: "00:00", close: "23:59" },
+      thursday: { open: "00:00", close: "23:59" },
+      friday: { open: "00:00", close: "23:59" },
+      saturday: { open: "00:00", close: "23:59" },
+      sunday: { open: "00:00", close: "23:59" }
+    },
+    active: true
   }
 ];
 
-const addSampleShopkeepers = async () => {
+const resetAndAddSampleShopkeepers = async () => {
   try {
+    // First, delete all existing shopkeepers
+    await Shopkeeper.deleteMany({});
+    console.log('Existing shopkeepers deleted');
+
+    // Then, insert new sample data
     await Shopkeeper.insertMany(sampleShopkeepers);
-    console.log('Sample shopkeepers added successfully');
+    console.log('New sample shopkeepers added successfully');
+    
     mongoose.connection.close();
   } catch (error) {
-    console.error('Error adding sample shopkeepers:', error);
+    console.error('Error resetting and adding sample shopkeepers:', error);
+    mongoose.connection.close();
   }
 };
 
-addSampleShopkeepers();
+resetAndAddSampleShopkeepers();

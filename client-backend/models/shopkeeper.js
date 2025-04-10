@@ -50,6 +50,12 @@ const shopkeeperSchema = new Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  priorityRate: {
+    type: Number,
+    required: true,
+    default: 1.0,
+    min: 1.0
   }
 }, { timestamps: true });
 
