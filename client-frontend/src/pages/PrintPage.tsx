@@ -220,31 +220,66 @@ function PrintPage() {
   }, [globalOptions]);
 
   // Checkout Handler
-  const handleCheckout = useCallback(() => {
-    if (!user) return;
-
-    const orderData = {
-      userId: user.id,
-      userName: user.fullName || user.username,
-      userEmail: user.emailAddresses[0]?.emailAddress,
-      files: files.map((file) => ({
-        name: file.file.name,
-        pageCount: file.pageCount,
-        selectedPages: file.selectedPages,
-        options: file.options,
-        price: file.price,
-      })),
-      totalPrice: files.reduce((sum, file) => sum + file.price, 0),
-      timestamp: new Date().toISOString(),
-    };
-
-    const encryptedData = CryptoJS.AES.encrypt(
-      JSON.stringify(orderData),
-      'print-order-secret'
-    ).toString();
-
-    console.log('Encrypted order data:', encryptedData);
-  }, [files, user]);
+  const handleCheckout = useCallback(async () => {
+    if (!user || !selectedShopkeeper) {
+      setError("Please select a shopkeeper and ensure you're logged in");
+      return;
+    }
+  
+    try {
+      setIsProcessing(true);
+      const formData = new FormData();
+  
+      // Add order metadata
+      const orderMetadata = {
+        userId: user.id,
+        userName: user.fullName || user.username,
+        userEmail: user.emailAddresses[0]?.emailAddress,
+        shopkeeperId: selectedShopkeeper._id,
+        isPriorityOrder,
+        totalPrice: files.reduce((sum, file) => sum + file.price, 0),
+        timestamp: new Date().toISOString()
+      };
+      formData.append('orderMetadata', JSON.stringify(orderMetadata));
+  
+      // Add files and their configurations
+      files.forEach((file, index) => {
+        // Append the actual file
+        formData.append(`file${index}`, file.file);
+        
+        // Append file configuration
+        const fileConfig = {
+          fileName: file.file.name,
+          pageCount: file.pageCount,
+          selectedPages: file.selectedPages,
+          options: file.options,
+          price: file.price
+        };
+        formData.append(`fileConfig${index}`, JSON.stringify(fileConfig));
+      });
+  
+      // Send the request to your backend
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/create`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to create order');
+      }
+  
+      const orderData = await response.json();
+      // Redirect to payment page or order confirmation
+      navigate(`/payment/${orderData.orderId}`);
+  
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to process order');
+      console.error('Checkout error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [files, user, selectedShopkeeper, isPriorityOrder, navigate]);
 
   // Theme toggle method
   const toggleTheme = () => {

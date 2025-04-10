@@ -4,8 +4,7 @@ const Schema = mongoose.Schema;
 
 const printJobSchema = new Schema({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: String, // Change from Schema.Types.ObjectId to String
     required: true
   },
   shopkeeperId: {

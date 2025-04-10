@@ -7,82 +7,87 @@ const { GridFsStorage } = require('multer-gridfs-storage');
 const path = require('path');
 const dotenv = require('dotenv');
 
+// Load environment variables
+dotenv.config();
+
 // Load models
 require('./models/shopkeeper');
-// require('./models/user');
-// require('./models/printJob');
-// require('./models/transaction');
-// require('./models/notification');
+require('./models/printJob');
 
 // Import database connection
 const connectDB = require('./utils/db');
 
+// Import orders routes
+const orderRoutes = require('./routes/orders');
+
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS configuration
+app.use(cors(
+  {
+    origin:"*",
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+  }
+));
+
+// Body parser middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
+// Variables to store GridFS bucket and storage
 let gfs;
-connectDB().then((conn) => {
-  gfs = new mongoose.mongo.GridFSBucket(conn.connection.db, {
-    bucketName: 'pdfs'
-  });
-});
+let upload;
 
-// Create storage engine for file uploads
-const storage = new GridFsStorage({
-  url: 'mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/printingAutomation',
-  options: { useNewUrlParser: true, useUnifiedTopology: true },
-  file: (req, file) => {
-    return {
-      bucketName: 'pdfs',
-      filename: `${Date.now()}_${file.originalname}`,
-      metadata: {
-        userId: req.body.userId,
-        shopkeeperId: req.body.shopkeeperId
-      }
-    };
-  }
-});
-
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (req, file, cb) => {
-    const filetypes = /pdf/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+// Initialize MongoDB, GridFS, and set up routes
+async function initializeApp() {
+  try {
+    // Connect to MongoDB first
+    await connectDB();
     
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only PDF files are allowed'));
+    // Now that we have a connection, initialize GridFS bucket
+    gfs = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+      bucketName: 'pdfs'
+    });
+    
+    // Import route files
+    const shopkeeperRoutes = require('./routes/shopkeepers');
+    
+    // Add middleware to check DB connection
+    const checkDbConnection = (req, res, next) => {
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+          success: false,
+          message: 'Database connection not ready'
+        });
+      }
+      next();
+    };
+    
+    // Use routes
+    app.use('/api/shopkeepers', checkDbConnection, shopkeeperRoutes);
+    app.use('/orders', checkDbConnection, orderRoutes);
+    
+    // Basic route for testing
+    app.get('/', (req, res) => {
+      res.send('Printing Automation API is running');
+    });
+    
+    // Start the server
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+    
+  } catch (err) {
+    console.error('Failed to initialize application:', err);
+    process.exit(1);
   }
-});
+}
 
-// Import route files
-const shopkeeperRoutes = require('./routes/shopkeepers');
-// const userRoutes = require('./routes/users');
-// const printJobRoutes = require('./routes/printJobs');
-
-// Use routes
-app.use('/api/shopkeepers', shopkeeperRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/print-jobs', printJobRoutes);
-
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.send('Printing Automation API is running');
-});
-
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start the application
+initializeApp();
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
