@@ -2,6 +2,224 @@ const { print } = require("unix-print");
 const fs = require('fs');
 const { PDFDocument } = require('pdf-lib');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+
+// Print Queue implementation
+class PrintQueue {
+  constructor() {
+    this.queue = []; // Array to store jobs
+    this.jobs = {}; // Object to track job status by ID
+    this.isProcessing = false; // Flag to track if we're processing jobs
+    this.windowStartTime = null; // Track when the current window started
+    this.windowJobs = []; // Jobs collected in the current window
+    this.windowInterval = 3000; // 3 second window
+    this.maxRankDrop = 5; // Maximum allowed rank drop
+  }
+
+  /**
+   * Add a job to the print queue
+   * @param {string} pdfPath - Path to the PDF file
+   * @param {object} config - Print configuration
+   * @param {number} priority - Priority level (0-100, higher = more priority)
+   * @returns {string} Job ID
+   */
+  addJob(pdfPath, config, priority = 50) {
+    const jobId = uuidv4();
+    const job = {
+      id: jobId,
+      pdfPath,
+      config,
+      priority,
+      status: 'queued',
+      addedAt: new Date(),
+      originalRank: null, // Track original position in queue
+      currentRank: null, // Track current position in queue
+      filename: path.basename(pdfPath) // Store filename for better logging
+    };
+
+    // Add job to tracking object
+    this.jobs[jobId] = job;
+
+    // Start a new window if none exists
+    if (!this.windowStartTime) {
+      this.windowStartTime = Date.now();
+      console.log('\n=== Starting new 3-second window ===');
+    }
+
+    // Add job to current window
+    this.windowJobs.push(job);
+    
+    // Sort window jobs by priority
+    this.windowJobs.sort((a, b) => b.priority - a.priority);
+    
+    // Update ranks
+    this.windowJobs.forEach((job, index) => {
+      if (job.originalRank === null) {
+        job.originalRank = index;
+      }
+      job.currentRank = index;
+    });
+
+    // Check for starvation
+    this.preventStarvation();
+
+    console.log(`\nAdded job: ${job.filename} (Priority: ${priority})`);
+    this.printQueueStatus();
+
+    // Start processing if not already
+    if (!this.isProcessing) {
+      this.processWindow();
+    }
+    
+    return jobId;
+  }
+
+  /**
+   * Prevent job starvation by limiting rank drops
+   */
+  preventStarvation() {
+    this.windowJobs.forEach((job, currentIndex) => {
+      const rankDrop = currentIndex - job.originalRank;
+      if (rankDrop > this.maxRankDrop) {
+        // Move job up to prevent starvation
+        const newIndex = job.originalRank + this.maxRankDrop;
+        this.windowJobs.splice(currentIndex, 1);
+        this.windowJobs.splice(newIndex, 0, job);
+        console.log(`\nPrevented starvation for ${job.filename}:`);
+        console.log(`- Moved from rank ${currentIndex} to ${newIndex}`);
+        console.log(`- Priority: ${job.priority}`);
+        console.log(`- Original rank: ${job.originalRank}`);
+        console.log(`- Current rank: ${newIndex}`);
+      }
+    });
+  }
+
+  /**
+   * Print the current queue status
+   */
+  printQueueStatus() {
+    console.log('\nCurrent Queue Status:');
+    console.log('====================');
+    this.windowJobs.forEach((job, index) => {
+      const rankChange = job.currentRank - job.originalRank;
+      const rankChangeStr = rankChange > 0 ? `(+${rankChange})` : rankChange < 0 ? `(${rankChange})` : '';
+      console.log(`Rank ${index}: ${job.filename}`);
+      console.log(`  Priority: ${job.priority}`);
+      console.log(`  Original Rank: ${job.originalRank}`);
+      console.log(`  Current Rank: ${job.currentRank} ${rankChangeStr}`);
+    });
+    console.log('====================\n');
+  }
+
+  /**
+   * Process the current window of jobs
+   */
+  async processWindow() {
+    if (this.isProcessing || this.windowJobs.length === 0) {
+      return;
+    }
+
+    // Wait for the window to complete
+    const timeElapsed = Date.now() - this.windowStartTime;
+    if (timeElapsed < this.windowInterval) {
+      const remainingTime = this.windowInterval - timeElapsed;
+      console.log(`\nWaiting ${remainingTime}ms for window to complete...`);
+      setTimeout(() => this.processWindow(), remainingTime);
+      return;
+    }
+
+    this.isProcessing = true;
+    console.log('\n=== Processing window of jobs ===');
+    this.printQueueStatus();
+
+    try {
+      // Process all jobs in the current window
+      while (this.windowJobs.length > 0) {
+        const job = this.windowJobs.shift();
+        
+        // Update status
+        job.status = 'printing';
+        job.startedAt = new Date();
+        
+        console.log(`\nProcessing job: ${job.filename}`);
+        console.log(`- Priority: ${job.priority}`);
+        console.log(`- Original Rank: ${job.originalRank}`);
+        console.log(`- Current Rank: ${job.currentRank}`);
+        
+        // Save the config to a temporary file
+        const configPath = path.join(path.dirname(job.pdfPath), `${job.id}-config.json`);
+        fs.writeFileSync(configPath, JSON.stringify(job.config));
+        
+        try {
+          // Print the document
+          const result = await printWithConfig(job.pdfPath, configPath);
+          
+          // Update job status
+          job.status = 'completed';
+          job.completedAt = new Date();
+          job.result = result;
+          
+          console.log(`\nJob completed: ${job.filename}`);
+          console.log(`- Status: Success`);
+          console.log(`- Priority: ${job.priority}`);
+        } catch (error) {
+          // Update job status with error
+          job.status = 'failed';
+          job.error = error.message;
+          
+          console.error(`\nJob failed: ${job.filename}`);
+          console.error(`- Error: ${error.message}`);
+        }
+        
+        // Clean up temporary config file
+        if (fs.existsSync(configPath)) {
+          fs.unlinkSync(configPath);
+        }
+      }
+      
+      // Clear the window
+      this.windowStartTime = null;
+      this.windowJobs = [];
+      console.log('\n=== Window processing completed ===\n');
+      
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Get the status of a specific job
+   * @param {string} jobId - The job ID
+   * @returns {object|null} Job status or null if not found
+   */
+  getJobStatus(jobId) {
+    return this.jobs[jobId] || null;
+  }
+
+  /**
+   * Remove a job from the queue
+   * @param {string} jobId - The job ID
+   * @returns {boolean} Success or failure
+   */
+  removeJob(jobId) {
+    const job = this.jobs[jobId];
+    
+    if (!job || job.status === 'printing' || job.status === 'completed') {
+      return false;
+    }
+    
+    // Remove from queue
+    this.queue = this.queue.filter(j => j.id !== jobId);
+    
+    // Update status
+    job.status = 'cancelled';
+    
+    return true;
+  }
+}
+
+// Create a singleton instance of the print queue
+const printQueue = new PrintQueue();
 
 /**
  * Extracts specific pages from a PDF file
@@ -228,5 +446,5 @@ if (require.main === module) {
   main();
 } else {
   // Export for use as a module
-  module.exports = { printWithConfig };
+  module.exports = { printWithConfig, printQueue };
 } 

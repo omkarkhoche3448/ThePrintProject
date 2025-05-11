@@ -1,0 +1,12 @@
+{
+  "printer": "Virtual_PDF_Printer_1",
+  "copies": 2,
+  "duplex": true,
+  "pages_per_sheet": 2,
+  "orientation": "portrait",
+  "paper_size": "A4",
+  "border": "single",
+  "color_mode": "monochrome",
+  "page_ranges": "1-4",
+  "priority": 75
+} 

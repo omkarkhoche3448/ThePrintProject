@@ -1,62 +1,113 @@
-# PDF Printer Utility
+# Priority-based Print Queue API
 
-A Node.js utility for printing PDF files with configurable printing options.
+This service provides a REST API for printing PDF files with configurable settings and priority levels.
+
+## Features
+
+- Submit PDF documents for printing with custom configuration
+- Priority-based print queue (0-100, higher number = higher priority)
+- Check job status
+- Cancel pending print jobs
+- Support for various print options (copies, duplex, page ranges, etc.)
 
 ## Installation
 
-```bash
-npm install
+1. Clone the repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Start the server:
+   ```
+   npm start
+   ```
+   
+For development with auto-restart:
+```
+npm run dev
 ```
 
-## Usage
+## API Endpoints
 
-The utility takes a PDF file and a config.json file as input:
+### Submit a Print Job
 
-```bash
-node printer.js <pdf_file_path> <config_json_path>
+**POST /api/print**
+
+Submit a PDF file and configuration for printing.
+
+**Request:**
+- Content-Type: `multipart/form-data`
+- Body:
+  - `pdf`: PDF file to print
+  - `config`: JSON string with print configuration
+
+**Example config:**
+```json
+{
+  "printer": "HP-LaserJet-2200",
+  "copies": 2,
+  "duplex": true,
+  "pages_per_sheet": 2,
+  "orientation": "landscape",
+  "paper_size": "A4",
+  "color_mode": "monochrome",
+  "page_ranges": "1-3,5,7-9",
+  "priority": 75
+}
 ```
 
-Example:
+**Response:**
+```json
+{
+  "message": "Print job added to queue",
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "priority": 75
+}
+```
 
-```bash
-node printer.js print-color-test-page-basic-1.pdf sample-config.json
+### Get Job Status
+
+**GET /api/print/:jobId**
+
+Retrieve the status of a specific print job.
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "priority": 75,
+  "status": "queued",
+  "addedAt": "2023-06-15T10:30:00.000Z"
+}
+```
+
+### Cancel a Job
+
+**DELETE /api/print/:jobId**
+
+Cancel a pending print job.
+
+**Response:**
+```json
+{
+  "message": "Print job cancelled successfully"
+}
 ```
 
 ## Configuration Options
 
-Create a config.json file with the following options:
-
-```json
-{
-  "printer": "PrinterName",      // Optional: Name of the printer. Uses default if omitted
-  "copies": 2,                   // Number: Number of copies to print
-  "duplex": true,                // Boolean: true for back-to-back printing, false for one-sided
-  "pages_per_sheet": 2,          // Number: 1, 2, 4, or 6 pages per sheet
-  "orientation": "landscape",    // String: "landscape" or "portrait"
-  "paper_size": "A4",            // String: "A2", "A3", "A4", etc.
-  "border": "none",              // String: "default" or "none"
-  "page_ranges": "1-4, 12, 17-20", // String: Specific pages to print (optional)
-  "color_mode": "monochrome"     // String: "monochrome", "bi-level", or "color"
-}
-```
-
-## Features
-
-- Supports both one-sided and duplex printing
-- Multiple copies option
-- Options for 1, 2, 4, or 6 pages per sheet
-- Portrait or landscape orientation
-- Different paper sizes (A2, A3, A4, etc.)
-- Border options
-- Automatically scales content to fit the page properly (no cropping)
-- Print specific page ranges
-- Color mode selection (monochrome, bi-level, color)
-
-### Color Mode Options
-
-- **Monochrome**: Grayscale printing using 1 color, usually black
-- **Bi-level**: Black and white printing using only black ink (no grayscale)
-- **Color**: Full color printing as per the document
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| printer | string | Name of the printer to use | System default |
+| copies | number | Number of copies to print | 1 |
+| duplex | boolean | Print on both sides of paper | false |
+| pages_per_sheet | number | Number of pages per sheet (1, 2, 4, or 6) | 1 |
+| orientation | string | Page orientation ("portrait" or "landscape") | "portrait" |
+| paper_size | string | Paper size (e.g., "A4", "Letter") | "A4" |
+| border | string | Border style ("none" or default with border) | Single line border |
+| color_mode | string | Color mode ("monochrome", "bi-level", or "color") | System default |
+| page_ranges | string | Pages to print (e.g., "1-4,6,8-10") | All pages |
+| priority | number | Job priority (0-100, higher = more priority) | 50 |
 
 ## Notes
 
