@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Shopkeeper = require('./models/shopkeeper');
 
-mongoose.connect('mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/printingAutomation', {
+mongoose.connect('mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/?retryWrites=true&w=majority&appName=CustomerServiceChat', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 }).then(() => console.log('MongoDB connected'))

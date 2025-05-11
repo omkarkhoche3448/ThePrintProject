@@ -3,6 +3,12 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const printJobSchema = new Schema({
+  jobId: {
+    type: String,
+    required: true,
+    unique: true,
+    default: () => `JOB-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+  },
   userId: {
     type: String, // Change from Schema.Types.ObjectId to String
     required: true

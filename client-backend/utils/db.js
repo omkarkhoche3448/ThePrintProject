@@ -1,10 +1,8 @@
-// config/db.js
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect('mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/printingAutomation', {
-      // Removed deprecated options
+    const conn = await mongoose.connect('mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/?retryWrites=true&w=majority&appName=CustomerServiceChat', {
     });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
