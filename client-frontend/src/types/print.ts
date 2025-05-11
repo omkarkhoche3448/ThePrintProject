@@ -13,7 +13,6 @@ export interface PrintOptions {
   borderStyle: BorderStyle;
   pageRange: string;
   copies: number;
-  paperType: PaperType;
   isPriority: boolean;
 }
 

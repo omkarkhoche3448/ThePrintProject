@@ -15,7 +15,8 @@ import {
   Upload,
   AlertCircle,
   Clock,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
@@ -39,7 +40,6 @@ const defaultPrintOptions: PrintOptions = {
   colorMode: 'BlackAndWhite',
   doubleSided: false,
   copies: 1,
-  paperType: 'Standard',
   isPriority: false,
 };
 
@@ -84,6 +84,7 @@ function PrintPage() {
   const [isPriorityOrder, setIsPriorityOrder] = useState(false);
   const [uploadHovered, setUploadHovered] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(5);
 
   // Clerk User Context
@@ -225,6 +226,7 @@ function PrintPage() {
   
     try {
       setIsProcessing(true);
+      setShowProcessingModal(true); // Show processing modal first
       const formData = new FormData();
   
       // Add order metadata
@@ -267,19 +269,21 @@ function PrintPage() {
   
       const orderData = await response.json();
       
-      // Show confirmation modal instead of redirecting immediately
+      // Hide processing modal and show confirmation modal
+      setShowProcessingModal(false);
       setShowConfirmationModal(true);
       
       // Start countdown for auto-redirect
       setRedirectCountdown(5);
       
     } catch (error) {
+      setShowProcessingModal(false);
       setError(error instanceof Error ? error.message : 'Failed to process order');
       console.error('Checkout error:', error);
     } finally {
       setIsProcessing(false);
     }
-  }, [files, user, selectedShopkeeper, isPriorityOrder, navigate]);
+  }, [files, user, selectedShopkeeper, isPriorityOrder]);
 
   // Handle countdown and redirect
   useEffect(() => {
@@ -761,6 +765,64 @@ function PrintPage() {
           </div>
         </div>
       </div>
+      
+      {/* Processing Modal */}
+      <AnimatePresence>
+        {showProcessingModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className={`max-w-md w-full rounded-2xl p-8 ${
+                isDarkTheme ? 'bg-[#1a1a1a] border border-white/10' : 'bg-white shadow-xl'
+              }`}
+            >
+              <div className="flex flex-col items-center text-center">
+                {/* Processing animation */}
+                <motion.div
+                  className={`w-24 h-24 mb-6 rounded-full flex items-center justify-center ${
+                    isDarkTheme ? 'bg-blue-900/30' : 'bg-blue-100'
+                  }`}
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Loader2 className={`w-12 h-12 ${
+                      isDarkTheme ? 'text-blue-400' : 'text-blue-600'
+                    }`} />
+                  </motion.div>
+                </motion.div>
+                
+                <h2 className="text-2xl font-bold mb-2">Processing Your Order</h2>
+                <p className={`mb-6 ${
+                  isDarkTheme ? 'text-white/70' : 'text-black/70'
+                }`}>
+                  Please wait while we process your documents and finalize your order...
+                </p>
+                
+                <div className="flex space-x-2 items-center">
+                  <span className={`block w-2 h-2 rounded-full animate-pulse ${
+                    isDarkTheme ? 'bg-blue-400' : 'bg-blue-600'
+                  }`}></span>
+                  <span className={`block w-2 h-2 rounded-full animate-pulse delay-150 ${
+                    isDarkTheme ? 'bg-blue-400' : 'bg-blue-600'
+                  }`}></span>
+                  <span className={`block w-2 h-2 rounded-full animate-pulse delay-300 ${
+                    isDarkTheme ? 'bg-blue-400' : 'bg-blue-600'
+                  }`}></span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Order Confirmation Modal */}
       <AnimatePresence>
