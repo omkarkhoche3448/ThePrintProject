@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const { GridFsStorage } = require('multer-gridfs-storage');
 const path = require('path');
 const dotenv = require('dotenv');
+const http = require('http');
 
 // Load environment variables
 dotenv.config();
@@ -13,15 +14,23 @@ dotenv.config();
 // Load models
 require('./models/shopkeeper');
 require('./models/printJob');
+require('./models/notification');
+require('./models/transaction');
 
 // Import database connection
 const connectDB = require('./utils/db');
 
-// Import orders routes
+// Import routes
 const orderRoutes = require('./routes/orders');
+const shopkeeperDashboardRoutes = require('./routes/shopkeeperDashboard');
+
+// Import services
+const { initChangeStream } = require('./services/changeStreamService');
+const { initWebSocketServer } = require('./services/websocketService');
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
 
 // CORS configuration
 app.use(cors(
@@ -44,12 +53,18 @@ let upload;
 async function initializeApp() {
   try {
     // Connect to MongoDB first
-    await connectDB();
+    const conn = await connectDB();
     
     // Now that we have a connection, initialize GridFS bucket
     gfs = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
       bucketName: 'pdfs'
     });
+    
+    // Initialize MongoDB Change Stream
+    await initChangeStream();
+    
+    // Initialize WebSocket Server
+    initWebSocketServer(server);
     
     // Import route files
     const shopkeeperRoutes = require('./routes/shopkeepers');
@@ -68,6 +83,7 @@ async function initializeApp() {
     // Use routes
     app.use('/api/shopkeepers', checkDbConnection, shopkeeperRoutes);
     app.use('/orders', checkDbConnection, orderRoutes);
+    app.use('/shopkeeper-dashboard', checkDbConnection, shopkeeperDashboardRoutes);
     
     // Basic route for testing
     app.get('/', (req, res) => {
@@ -76,8 +92,9 @@ async function initializeApp() {
     
     // Start the server
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`WebSocket server available at ws://localhost:${PORT}`);
     });
     
   } catch (err) {
