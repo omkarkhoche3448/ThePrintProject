@@ -32,50 +32,43 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 function createWindow() {
   log.info('Creating browser window...');
-  // Create the browser window with some sensible defaults
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // Add devTools configuration
+      devTools: isDevelopment
     },
-    // Use custom title bar styling
     frame: true,
     title: 'Print Project Dashboard'
   });
 
-  // Load the app - in development use local dev server, in production use built files
   if (isDevelopment) {
     log.info('Running in development mode');
-    // In development, load from Vite dev server
-    mainWindow.loadURL('http://localhost:5173');
-    // Open DevTools automatically in development
-    mainWindow.webContents.openDevTools();
-    
-    // Handle DevTools specific errors by suppressing them
-    mainWindow.webContents.on('did-finish-load', () => {
-      // Inject script to handle DevTools console errors
-      mainWindow.webContents.executeJavaScript(`
-        const originalConsoleError = console.error;
-        console.error = (...args) => {
-          const errorString = args.join(' ');
-          if (
-            errorString.includes("Autofill.enable") || 
-            errorString.includes("Autofill.setAddresses") ||
-            errorString.includes("is not valid JSON")
-          ) {
-            // Suppress known DevTools errors
-            return;
-          }
-          originalConsoleError(...args);
-        };
-      `);
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      log.error('Failed to load:', errorDescription);
+      // Retry loading after a short delay
+      setTimeout(() => {
+        if (mainWindow) {
+          mainWindow.loadURL('http://localhost:5173').catch(err => {
+            log.error('Retry failed:', err);
+          });
+        }
+      }, 1000);
     });
+
+    mainWindow.loadURL('http://localhost:5173')
+      .then(() => {
+        mainWindow.webContents.openDevTools();
+      })
+      .catch(error => {
+        log.error('Failed to load dev server:', error);
+      });
   } else {
     log.info('Running in production mode');
-    // In production, load the built HTML file
     mainWindow.loadURL(
       url.format({
         pathname: path.join(__dirname, '../dist/index.html'),
@@ -85,15 +78,13 @@ function createWindow() {
     );
   }
 
-  // Handle window closed event
   mainWindow.on('closed', () => {
     log.info('Window closed');
-    // Dereference the window object
     mainWindow = null;
   });
 }
 
-// Auto updater events
+// Auto updater events with improved error handling
 autoUpdater.on('checking-for-update', () => {
   log.info('Checking for updates...');
   sendStatusToWindow('Checking for updates...');
@@ -111,20 +102,17 @@ autoUpdater.on('update-not-available', (info) => {
 
 autoUpdater.on('error', (err) => {
   log.error('Error in auto-updater:', err);
-  sendStatusToWindow(`Error in auto-updater: ${err.toString()}`);
+  sendStatusToWindow(`Update error: ${err.message || 'Unknown error'}`);
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
-  log.info('Download progress:', progressObj);
-  let logMessage = `Download speed: ${progressObj.bytesPerSecond}`;
-  logMessage = `${logMessage} - Downloaded ${progressObj.percent}%`;
-  logMessage = `${logMessage} (${progressObj.transferred}/${progressObj.total})`;
-  sendStatusToWindow(logMessage);
+  let message = `Downloading: ${Math.round(progressObj.percent)}%`;
+  log.info('Download progress:', message);
+  sendStatusToWindow(message);
 });
 
 autoUpdater.on('update-downloaded', (info) => {
-  log.info('Update downloaded:', info);
-  // Ask user to update the app
+  log.info('Update downloaded');
   dialog.showMessageBox({
     type: 'info',
     title: 'Update Ready',
@@ -137,44 +125,36 @@ autoUpdater.on('update-downloaded', (info) => {
   });
 });
 
-// Update the sendStatusToWindow function to handle potential serialization issues
+// Improved status message handling
 function sendStatusToWindow(text) {
-  if (mainWindow) {
-    try {
-      // Ensure text is a string
-      const safeText = typeof text === 'string' ? text : 
-        (text && typeof text.toString === 'function' ? text.toString() : 'Status updated');
-      mainWindow.webContents.send('update-message', safeText);
-    } catch (error) {
-      log.error('Error sending message to window:', error);
-      // Try sending a simplified message if the original failed
-      try {
-        mainWindow.webContents.send('update-message', 'Status updated');
-      } catch (innerError) {
-        log.error('Failed to send fallback message:', innerError);
-      }
-    }
+  if (!mainWindow) return;
+
+  try {
+    // Ensure we're sending a string
+    const safeMessage = String(text).substring(0, 1000);
+    mainWindow.webContents.send('update-message', safeMessage);
+  } catch (error) {
+    log.error('Error sending status to window:', error);
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
+// This method will be called when Electron has finished initialization
 app.on('ready', () => {
-  // Remove default menu
   Menu.setApplicationMenu(null);
-  
   createWindow();
   
-  // Check for updates after 3 seconds (give app time to fully load)
   if (!isDevelopment) {
     setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      try {
+        autoUpdater.checkForUpdatesAndNotify();
+      } catch (error) {
+        log.error('Error checking for updates:', error);
+      }
     }, 3000);
   }
 });
 
-// Quit when all windows are closed, except on macOS where it's common
-// for applications to remain open until the user explicitly quits
+// Handle app activation
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     log.info('All windows closed, quitting application');
@@ -183,15 +163,13 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) {
     log.info('App activated, creating window');
     createWindow();
   }
 });
 
-// Security best practices: Set Content-Security-Policy
+// Set Content-Security-Policy
 app.on('ready', () => {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -203,32 +181,12 @@ app.on('ready', () => {
   });
 });
 
-// Handle IPC messages from renderer process - using handle/invoke pattern
-ipcMain.handle('get-app-version', async () => {
+// Handle IPC messages using invoke/handle pattern for better error handling
+ipcMain.handle('get-app-version', () => {
   try {
-    // Just return the version as a string - simpler is more reliable
     return app.getVersion();
   } catch (error) {
     log.error('Error getting app version:', error);
     return 'unknown';
   }
-});
-
-// Suppress specific DevTools errors in development
-app.on('web-contents-created', (_, webContents) => {
-  webContents.on('console-message', (_, level, message) => {
-    if (
-      message.includes("Autofill.enable") || 
-      message.includes("Autofill.setAddresses") ||
-      message.includes("is not valid JSON")
-    ) {
-      // Suppress known DevTools errors
-      return;
-    }
-    
-    // Log other console messages at appropriate levels
-    if (level === 0) log.info(message);
-    else if (level === 1) log.warn(message);
-    else if (level === 2) log.error(message);
-  });
 });

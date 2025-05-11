@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 declare global {
   interface Window {
@@ -15,44 +15,66 @@ export const UpdateNotification = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Get app version if running in Electron
-    if (window.electronAPI) {
-      window.electronAPI.getAppVersion()
-        .then((version) => {
-          setVersion(version);
-        })
-        .catch((error) => {
-          console.error('Failed to get app version:', error);
-          setError('Could not retrieve app version');
-        });
-
-      // Listen for update messages from the main process
-      try {
-        // Use the new onUpdateMessage method which returns a cleanup function
-        const removeListener = window.electronAPI.onUpdateMessage((message) => {
-          setMessage(message);
-          setShowNotification(true);
-        });
-        
-        // Return the cleanup function to remove the listener when component unmounts
-        return removeListener;
-      } catch (error) {
-        console.error('Error setting up update message listener:', error);
-      }
+  // Wrap message handler in useCallback to prevent unnecessary recreations
+  const handleUpdateMessage = useCallback((message: string) => {
+    try {
+      setMessage(message);
+      setShowNotification(true);
+      setError(null);
+    } catch (err) {
+      console.error('Error handling update message:', err);
+      setError('Failed to process update message');
     }
   }, []);
 
+  useEffect(() => {
+    if (!window.electronAPI) {
+      setError('Electron API not available');
+      return;
+    }
+
+    // Get app version
+    window.electronAPI.getAppVersion()
+      .then((version) => {
+        setVersion(version);
+        setError(null);
+      })
+      .catch((error) => {
+        console.error('Failed to get app version:', error);
+        setError('Could not retrieve app version');
+      });
+
+    // Set up update message listener
+    let cleanup: (() => void) | undefined;
+    try {
+      cleanup = window.electronAPI.onUpdateMessage(handleUpdateMessage);
+    } catch (error) {
+      console.error('Error setting up update message listener:', error);
+      setError('Failed to initialize update notifications');
+    }
+
+    // Return cleanup function
+    return () => {
+      if (cleanup) {
+        try {
+          cleanup();
+        } catch (error) {
+          console.error('Error cleaning up update message listener:', error);
+        }
+      }
+    };
+  }, [handleUpdateMessage]);
+
   // Hide the notification after 5 seconds if it's not about downloading
   useEffect(() => {
-    if (message && !message.includes('Downloading')) {
+    if (message && !message.includes('Downloading') && showNotification) {
       const timer = setTimeout(() => {
         setShowNotification(false);
       }, 5000);
       
       return () => clearTimeout(timer);
     }
-  }, [message]);
+  }, [message, showNotification]);
 
   if (!showNotification || (!message && !error)) {
     return null;

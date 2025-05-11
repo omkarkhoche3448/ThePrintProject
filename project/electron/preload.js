@@ -1,37 +1,32 @@
 // Preload script runs in Electron before the renderer process
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Simple, reliable API for the renderer process
-contextBridge.exposeInMainWorld('electronAPI', {
-  // Get app version using a more reliable approach with invoke (Promise-based API)
-  getAppVersion: () => {
-    return ipcRenderer.invoke('get-app-version')
-      .catch(error => {
-        console.error('Failed to get app version:', error);
-        return 'unknown'; // Always return a value, never throw
-      });
-  },
-  
-  // Listen for update messages
-  onUpdateMessage: (callback) => {
-    const listener = (_, message) => {
-      try {
-        // Ensure message is a string
-        const safeMessage = typeof message === 'string' ? message : 
-          (message && typeof message === 'object' ? JSON.stringify(message) : 'Update status changed');
-        callback(safeMessage);
-      } catch (error) {
-        console.error('Error in update message handler:', error);
-        callback('Update status changed');
-      }
-    };
-    
-    // Add the listener
-    ipcRenderer.on('update-message', listener);
-    
-    // Return a function to remove the listener (for cleanup)
-    return () => {
-      ipcRenderer.removeListener('update-message', listener);
-    };
+// Error wrapper for IPC calls
+const safeIpcInvoke = async (channel, ...args) => {
+  try {
+    return await ipcRenderer.invoke(channel, ...args);
+  } catch (error) {
+    console.error(`IPC invoke error (${channel}):`, error);
+    throw error;
   }
-});
+};
+
+// Expose protected methods that allow the renderer process to use
+contextBridge.exposeInMainWorld(
+  'electron',
+  {
+    getAppVersion: () => safeIpcInvoke('get-app-version'),
+    receive: (channel, func) => {
+      if (channel === 'update-message') {
+        // Wrap callback to ensure error handling
+        ipcRenderer.on(channel, (event, ...args) => {
+          try {
+            func(...args);
+          } catch (error) {
+            console.error(`Error in IPC receiver (${channel}):`, error);
+          }
+        });
+      }
+    }
+  }
+);

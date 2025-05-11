@@ -8,7 +8,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  base: './',
+  base: process.env.ELECTRON=="true" ? './' : "/",
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -25,5 +25,16 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Content-Type': 'application/json',
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
 });
