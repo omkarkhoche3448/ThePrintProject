@@ -1,2 +1,4 @@
 client-backend/node_modules
 client-frontend/node_modules
+electron-react-app/node_modules
+server-xerox-backend/node_modules
