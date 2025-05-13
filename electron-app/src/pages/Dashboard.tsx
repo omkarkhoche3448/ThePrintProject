@@ -35,7 +35,6 @@ const Dashboard = () => {
   
   // State for print jobs from WebSocket
   const [printJobs, setPrintJobs] = useState<PrintJobType[]>([]);
-  const [jobsInQueue, setJobsInQueue] = useState<PrintJobType[]>([]);
   const [webSocketConnected, setWebSocketConnected] = useState(false);
 
   // Sample printer data (keep this for now)
@@ -74,32 +73,13 @@ const Dashboard = () => {
   // Handle new print job from WebSocket
   const handleNewJob = (job: PrintJobType) => {
     setPrintJobs(prevJobs => [job, ...prevJobs]);
-    if (job.status === 'pending') {
-      setJobsInQueue(prevJobs => [job, ...prevJobs]);
-    }
   };
 
   // Handle print job update from WebSocket
   const handleJobUpdate = (updatedJob: PrintJobType) => {
-    // Update the job in the print jobs list
     setPrintJobs(prevJobs => prevJobs.map(job => 
       job.jobId === updatedJob.jobId ? updatedJob : job
     ));
-    
-    // Update or remove the job from queue depending on status
-    if (updatedJob.status === 'pending') {
-      setJobsInQueue(prevJobs => {
-        const exists = prevJobs.some(job => job.jobId === updatedJob.jobId);
-        if (exists) {
-          return prevJobs.map(job => job.jobId === updatedJob.jobId ? updatedJob : job);
-        } else {
-          return [...prevJobs, updatedJob];
-        }
-      });
-    } else {
-      // If job is no longer pending, remove from queue
-      setJobsInQueue(prevJobs => prevJobs.filter(job => job.jobId !== updatedJob.jobId));
-    }
   };
 
   // Initialize WebSocket and fetch initial data
@@ -122,10 +102,6 @@ const Dashboard = () => {
         const response = await printJobService.fetchJobs();
         if (response.success && response.jobs) {
           setPrintJobs(response.jobs);
-          
-          // Filter out only pending jobs for the queue
-          const pendingJobs = response.jobs.filter(job => job.status === 'pending');
-          setJobsInQueue(pendingJobs);
         }
       } catch (error) {
         console.error('Error fetching initial jobs:', error);
@@ -213,6 +189,10 @@ const Dashboard = () => {
     setShowDialog(true);
   };
 
+  // Filter jobs for UI sections
+  const pendingJobs = printJobs.filter(job => job.status === 'pending');
+  const processingJobs = printJobs.filter(job => job.status === 'processing');
+
   // Loading state JSX
   if (isLoading) {
     return (
@@ -250,9 +230,9 @@ const Dashboard = () => {
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Print Jobs</h3>
             <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              {/* Print Jobs with numbering */}
-              {printJobs.length > 0 ? (
-                printJobs.map((job, index) => (
+              {/* Only show jobs with status 'pending' */}
+              {pendingJobs.length > 0 ? (
+                pendingJobs.map((job, index) => (
                   <div className="mb-3" key={job.jobId}>
                     <PrintJob 
                       orderId={job.orderId}
@@ -274,7 +254,7 @@ const Dashboard = () => {
               <div className="mt-6">
                 <StatsCard 
                   title="Total Print Jobs" 
-                  value={printJobs.length.toString()}
+                  value={pendingJobs.length.toString()}
                   percentChange={15} 
                   icon={<FileText className="w-5 h-5 text-primary" />} 
                   additionalInfo="Last week total: 12"
@@ -287,16 +267,17 @@ const Dashboard = () => {
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Queue Section</h3>
             <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">              
-              {/* Print Jobs in queue */}
-              {jobsInQueue.length > 0 ? (
-                jobsInQueue.map((job) => (
+              {/* Only show jobs with status 'processing' */}
+              {processingJobs.length > 0 ? (
+                processingJobs.map((job, index) => (
                   <div className="mb-3" key={`queue-${job.jobId}`}>
                     <PrintJob 
                       orderId={job.orderId}
                       pdfCount={job.pdfCount || job.filesCount}
                       cost={job.cost || '$0.00'}
                       automationEnabled={automationEnabled}
-                      onPrint={() => handlePrint(job.orderId)}
+                      onPrint={() => {}} // Required prop, but no-op in queue
+                      queueNumber={index + 1}
                       showPrintButton={false}
                     />
                   </div>
@@ -311,7 +292,7 @@ const Dashboard = () => {
               <div className="mt-6">
                 <StatsCard 
                   title="In Queue" 
-                  value={jobsInQueue.length.toString()}
+                  value={processingJobs.length.toString()}
                   percentChange={-10} 
                   icon={<BarChart3 className="w-5 h-5 text-primary" />} 
                   additionalInfo="Processing time: ~5 min"
