@@ -26,6 +26,7 @@ const orderRoutes = require('./routes/orders');
 const shopkeeperDashboardRoutes = require('./routes/shopkeeperDashboard');
 const jobProcessRoutes = require('./routes/jobProcess');
 const { router: authRoutes } = require('./routes/auth');
+const filePreviewRoutes = require('./routes/filePreview'); // Add this line
 
 // Import WebSocket events utility
 const wsEvents = require('./utils/wsEvents');
@@ -189,6 +190,7 @@ async function initializeApp() {
     app.use('/orders', checkDbConnection, orderRoutes);
     app.use('/shopkeeper-dashboard', checkDbConnection, shopkeeperDashboardRoutes);
     app.use('/job-process', checkDbConnection, jobProcessRoutes);
+    app.use('/api/file-preview', filePreviewRoutes); // Add this line
     
     // Basic route for testing
     app.get('/', (req, res) => {

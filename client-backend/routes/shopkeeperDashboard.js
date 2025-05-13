@@ -120,7 +120,7 @@ router.get('/print-jobs/:jobId', async (req, res) => {
         { jobId },
         { orderId: jobId }
       ]
-    });
+    }).populate('shopkeeperId', 'name email phoneNumber address'); // Populate shopkeeper details
     
     if (!printJob) {
       return res.status(404).json({
@@ -129,9 +129,18 @@ router.get('/print-jobs/:jobId', async (req, res) => {
       });
     }
     
+    // Enhanced response with file preview URLs
+    const enhancedPrintJob = {
+      ...printJob.toObject(),
+      files: printJob.files.map(file => ({
+        ...file,
+        previewUrl: `/api/file-preview/${file.fileId}`
+      }))
+    };
+    
     return res.status(200).json({
       success: true,
-      job: printJob
+      job: enhancedPrintJob
     });
     
   } catch (error) {
