@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const printJobService = require('../services/printJobService');
 
 /**
  * Start processing a print job (transition from pending to processing)
@@ -13,61 +14,63 @@ router.put('/:jobId/execute', async (req, res) => {
   try {
     const { jobId } = req.params;
     
-    // Get the PrintJob model
-    const PrintJob = mongoose.model('PrintJob');
-    
-    // Find the job and make sure it's in pending state
-    const job = await PrintJob.findOne({ 
-      $or: [
-        { jobId: jobId }, 
-        { orderId: jobId }  // Allow finding by either jobId or orderId
-      ],
-      status: 'pending' 
-    });
-    
-    if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: 'Print job not found or not in pending state'
-      });
-    }
-    
-    // Update the job status to processing and add timestamp
-    job.status = 'processing';
-    job.timeline.processing = new Date();
-    
-    // Save the updated job
-    await job.save();
-    
-    // Create a notification for the user
-    try {
-      const Notification = mongoose.model('Notification');
-      
-      const notification = new Notification({
-        recipient: 'user',
-        recipientId: job.userId,
-        title: 'Print Job Processing',
-        message: `Your order #${job.orderId} is now being processed`,
-        type: 'order_update',
-        relatedTo: {
-          model: 'PrintJob',
-          id: job._id
-        }
-      });
-      
-      await notification.save();
-    } catch (notifError) {
-      console.error('Error creating notification:', notifError);
-      // Continue with response even if notification fails
-    }
-    
-    return res.status(200).json({
+    // Use the service to process the job
+    const job = await printJobService.startProcessingJob(jobId);
+      return res.status(200).json({
       success: true,
       job
     });
     
   } catch (error) {
     console.error('Error executing print job:', error);
+    
+    // Determine appropriate status code based on error type
+    if (error.message.includes('not found') || error.message.includes('not in pending state')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Start processing a print job (transition from pending to processing)
+ * Button-friendly endpoint for UI actions
+ * @route POST /job-process/:jobId/start-processing
+ * @param {string} jobId - Print job ID
+ * @returns {Object} Updated print job
+ */
+router.post('/:jobId/start-processing', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    // Use the service to process the job
+    const job = await printJobService.startProcessingJob(jobId);
+    
+    return res.status(200).json({
+      success: true,
+      job,
+      message: "Job processing started successfully"
+    });
+    
+  } catch (error) {
+    console.error('Error starting job processing:', error);
+    
+    // Determine appropriate status code based on error type
+    if (error.message.includes('not found') || error.message.includes('not in pending state')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
     return res.status(500).json({
       success: false,
       message: 'Server error',

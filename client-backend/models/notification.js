@@ -1,15 +1,15 @@
 // models/notification.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const { Mixed } = Schema.Types;
 
 const notificationSchema = new Schema({
   recipient: {
     type: String,
     enum: ['user', 'shopkeeper'],
     required: true
-  },
-  recipientId: {
-    type: Schema.Types.ObjectId,
+  },  recipientId: {
+    type: Schema.Types.Mixed, // Changed from ObjectId to Mixed to support both ObjectId and String
     required: true
   },
   title: {

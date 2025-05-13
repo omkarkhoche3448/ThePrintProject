@@ -110,7 +110,6 @@ class PrintJobService {
       };
     }
   }
-
   /**
    * Execute a job (start processing)
    * @param jobId The ID of the job to execute
@@ -118,7 +117,8 @@ class PrintJobService {
    */
   public async executeJob(jobId: string): Promise<PrintJobResponse> {
     try {
-      const response = await api.put(`/job-process/${jobId}/execute`);
+      // Using the POST endpoint which is more button-friendly for UI actions
+      const response = await api.post(`/job-process/${jobId}/start-processing`);
       return response.data;
     } catch (error: any) {
       return {

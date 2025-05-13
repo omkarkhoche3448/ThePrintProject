@@ -73,6 +73,75 @@ const getPreviousJobStatus = async (jobId, currentStatus) => {
 };
 
 /**
+ * Start processing a print job (transition from pending to processing)
+ * 
+ * @param {String} jobId - The ID of the job (can be jobId or orderId)
+ * @returns {Promise<Object>} - The updated print job object
+ * @throws {Error} - If job is not found or not in pending state
+ */
+const startProcessingJob = async (jobId) => {
+  try {
+    // Validate input
+    if (!jobId) {
+      throw new Error('Job ID is required');
+    }
+    
+    // Get the PrintJob model
+    const PrintJob = mongoose.model('PrintJob');
+    
+    // Find the job and make sure it's in pending state
+    const job = await PrintJob.findOne({ 
+      $or: [
+        { jobId: jobId }, 
+        { orderId: jobId }  // Allow finding by either jobId or orderId
+      ],
+      status: 'pending' 
+    });
+    
+    if (!job) {
+      throw new Error('Print job not found or not in pending state');
+    }
+    
+    // Update the job status to processing and add timestamp
+    job.status = 'processing';
+    job.timeline.processing = new Date();
+    
+    // Save the updated job
+    await job.save();
+    
+    // Create a notification for the user
+    try {
+      const Notification = mongoose.model('Notification');
+      
+      const notification = new Notification({
+        recipient: 'user',
+        recipientId: job.userId,
+        title: 'Print Job Processing',
+        message: `Your order #${job.orderId} is now being processed`,
+        type: 'order_update',
+        relatedTo: {
+          model: 'PrintJob',
+          id: job._id
+        }
+      });
+      
+      await notification.save();
+      
+      // Broadcast notification to user
+      wsEvents.broadcastNotification(notification);
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+      // Continue even if notification fails
+    }
+    
+    return job;
+  } catch (error) {
+    console.error('Error starting print job processing:', error);
+    throw error;
+  }
+};
+
+/**
  * Set up a change stream to monitor print job changes
  * This will broadcast events when jobs are created or updated
  */
@@ -150,5 +219,6 @@ const setupPrintJobChangeStream = async () => {
 module.exports = {
   getLivePrintJobs,
   setupPrintJobChangeStream,
-  getPreviousJobStatus
+  getPreviousJobStatus,
+  startProcessingJob
 };

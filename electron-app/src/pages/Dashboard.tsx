@@ -156,8 +156,7 @@ const Dashboard = () => {
     setShowDialog(true);
     setAutomationEnabled(newStatus);
   };
-  
-  const handlePrint = async (orderId: string) => {
+    const handlePrint = async (orderId: string) => {
     try {
       // Find the job by orderId
       const job = printJobs.find(job => job.orderId === orderId);
@@ -165,9 +164,16 @@ const Dashboard = () => {
         // Call the service to start processing the job
         const response = await printJobService.executeJob(job.jobId);
         if (response.success) {
+          // Handle successful job execution
           toast({
             title: "Print Job Started",
             description: `Now printing order #${orderId}`
+          });
+          
+          // Update local state to reflect job status change to "processing"
+          handleJobUpdate({
+            ...job,
+            status: 'processing'
           });
         } else {
           toast({
@@ -176,6 +182,13 @@ const Dashboard = () => {
             variant: "destructive"
           });
         }
+      } else {
+        console.error(`Job with orderId ${orderId} not found`);
+        toast({
+          title: "Print Error",
+          description: `Job with order ID #${orderId} not found`,
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error(`Error printing order ${orderId}:`, error);
