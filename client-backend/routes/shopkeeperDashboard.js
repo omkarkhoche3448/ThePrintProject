@@ -3,6 +3,36 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { ObjectId } = require('mongodb');
+const printJobService = require('../services/printJobService');
+
+/**
+ * Get all live print jobs for a shopkeeper (pending or processing)
+ * @route GET /:shopkeeperId/live-print-jobs
+ * @description Get all print jobs with status pending or processing
+ * @access Private
+ */
+router.get('/:shopkeeperId/live-print-jobs', async (req, res) => {
+  try {
+    const { shopkeeperId } = req.params;
+    
+    // Get live print jobs (pending and processing)
+    const liveJobs = await printJobService.getLivePrintJobs(shopkeeperId);
+    
+    return res.status(200).json({
+      success: true,
+      count: liveJobs.length,
+      jobs: liveJobs
+    });
+    
+  } catch (error) {
+    console.error('Error fetching live print jobs:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
 
 // Get print jobs for a specific shopkeeper with pagination and status filtering
 router.get('/:shopkeeperId/print-jobs', async (req, res) => {

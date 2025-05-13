@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const WebSocket = require("ws");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -8,6 +9,9 @@ if (require("electron-squirrel-startup")) {
 
 const isDevelopment = process.env.ELECTRON === "true";
 let mainWindow = null;
+let websocket = null;
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 10;
 
 const createWindow = () => {
   // Create the browser window.
@@ -34,6 +38,107 @@ const createWindow = () => {
   }
 };
 
+// Connect to WebSocket server
+const connectWebSocket = (token, shopkeeperId) => {
+  // Close existing connection if any
+  if (websocket) {
+    websocket.close();
+  }
+
+  const wsUrl = `ws://localhost:3000?token=${token}&type=shopkeeper&id=${shopkeeperId}`;
+  websocket = new WebSocket(wsUrl);
+
+  // WebSocket event handlers
+  websocket.on('open', () => {
+    console.log('WebSocket connected');
+    reconnectAttempts = 0;
+    if (mainWindow) {
+      mainWindow.webContents.send('print-job-update', { 
+        type: 'connection', 
+        connected: true 
+      });
+    }
+  });
+
+  websocket.on('message', (data) => {
+    try {
+      const message = JSON.parse(data);
+      console.log('WebSocket message received:', message.type);
+      
+      if (mainWindow) {
+        // Forward message to renderer process
+        if (message.type === 'newPrintJob' || message.type === 'updatedPrintJob') {
+          mainWindow.webContents.send('print-job-received', message);
+        } else if (message.type === 'ping') {
+          // Respond to ping
+          websocket.send(JSON.stringify({
+            event: 'pong',
+            data: { timestamp: new Date().toISOString() }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error processing WebSocket message:', error);
+    }
+  });
+
+  websocket.on('close', () => {
+    console.log('WebSocket connection closed');
+    if (mainWindow) {
+      mainWindow.webContents.send('print-job-update', { 
+        type: 'connection', 
+        connected: false 
+      });
+    }
+    
+    // Attempt to reconnect if not closed manually
+    if (reconnectAttempts < maxReconnectAttempts) {
+      reconnectAttempts++;
+      console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+      setTimeout(() => connectWebSocket(token, shopkeeperId), 5000);
+    }
+  });
+
+  websocket.on('error', (error) => {
+    console.error('WebSocket error:', error);
+    if (mainWindow) {
+      mainWindow.webContents.send('print-job-update', { 
+        type: 'error', 
+        error: error.message 
+      });
+    }
+  });
+
+  return websocket;
+};
+
+// Handle IPC messages from renderer process
+ipcMain.handle('connect-websocket', (event, { token, shopkeeperId }) => {
+  try {
+    connectWebSocket(token, shopkeeperId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error connecting to WebSocket:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('disconnect-websocket', () => {
+  if (websocket) {
+    websocket.close();
+    websocket = null;
+  }
+  return { success: true };
+});
+
+ipcMain.on('print-job-request', (event, data) => {
+  if (websocket && websocket.readyState === WebSocket.OPEN) {
+    websocket.send(JSON.stringify(data));
+  } else {
+    console.error('WebSocket not connected');
+  }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
@@ -54,8 +159,3 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
-
-// Handle IPC messages from renderer process
-// Add any IPC handlers here as needed
-// Example:
-// ipcMain.handle("get-app-version", () => app.getVersion());
