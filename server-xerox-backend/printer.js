@@ -282,6 +282,101 @@ async function extractPages(pdfPath, pageRanges) {
 }
 
 /**
+ * Appends an information page to the end of a PDF with centered text on both sides
+ * @param {string} pdfPath - Path to the source PDF file
+ * @param {string} username - Username from config
+ * @param {string} orderId - Order ID from config
+ * @returns {Promise<string>} - Path to the new PDF with appended info pages
+ */
+async function appendInfoPage(pdfPath, username, orderId) {
+  // Read the PDF file
+  const pdfBytes = fs.readFileSync(pdfPath);
+  const srcDoc = await PDFDocument.load(pdfBytes);
+  
+  // Create a new document
+  const newDoc = await PDFDocument.create();
+  
+  // Embed fonts first - do this once at the document level
+  const timesBold = await newDoc.embedFont('Times-Bold');
+  const timesRoman = await newDoc.embedFont('Times-Roman');
+  
+  // Copy all pages from source document
+  const pageIndices = Array.from({ length: srcDoc.getPageCount() }, (_, i) => i);
+  const copiedPages = await newDoc.copyPages(srcDoc, pageIndices);
+  for (const page of copiedPages) {
+    newDoc.addPage(page);
+  }
+  
+  // Function to add content to a page with proper centering
+  const addContentToPage = (page) => {
+    const { width, height } = page.getSize();
+    
+    // Text content
+    const thankYouText = "THANK YOU FOR BEING A VALUABLE CUSTOMER!";
+    const usernameText = `${username || 'Guest'}`;
+    const orderIdText = `#${orderId || 'N/A'}`;
+    
+    // Calculate appropriate font size for thank you text to fit on page
+    // Start with desired size and reduce if needed to fit
+    let thankYouSize = 18;
+    let usernameSize = 20;
+    let orderIdSize = 16;
+    
+    // Get precise text width using the actual font object
+    const thankYouWidth = timesBold.widthOfTextAtSize(thankYouText, thankYouSize);
+    const usernameWidth = timesBold.widthOfTextAtSize(usernameText, usernameSize);
+    const orderIdWidth = timesRoman.widthOfTextAtSize(orderIdText, orderIdSize);
+    
+    // Ensure text fits within page margins
+    const pageSafeWidth = width * 0.9; // Use 90% of page width for safety margin
+    
+    // Thank You message (BOLD - centered)
+    page.drawText(thankYouText, {
+      x: (width - thankYouWidth) / 2, 
+      y: height/2 + 100,
+      size: thankYouSize,
+      font: timesBold
+    });
+    
+    // Username (BOLD - centered)
+    page.drawText(usernameText, {
+      x: (width - usernameWidth) / 2,
+      y: height/2,
+      size: usernameSize,
+      font: timesBold
+    });
+    
+    // Order ID (centered)
+    page.drawText(orderIdText, {
+      x: (width - orderIdWidth) / 2,
+      y: height/2 - 100,
+      size: orderIdSize,
+      font: timesRoman
+    });
+  };
+  
+  // Add front info page
+  const frontPage = newDoc.addPage();
+  addContentToPage(frontPage);
+  
+  // Add back info page
+  const backPage = newDoc.addPage();
+  addContentToPage(backPage);
+  
+  // Save the new document
+  const newPdfBytes = await newDoc.save();
+  
+  const fileExt = path.extname(pdfPath);
+  const fileName = path.basename(pdfPath, fileExt);
+  const newPdfPath = path.join(path.dirname(pdfPath), `${fileName}_with_info${fileExt}`);
+  
+  fs.writeFileSync(newPdfPath, Buffer.from(newPdfBytes));
+  console.log(`Created PDF with single-line centered text: ${newPdfPath}`);
+  
+  return newPdfPath;
+}
+
+/**
  * Prints a PDF file based on configuration in config.json
  * @param {string} pdfPath - Path to the PDF file
  * @param {string} configPath - Path to the config.json file
@@ -367,56 +462,59 @@ async function printWithConfig(pdfPath, configPath) {
   // Handle page ranges by extracting specified pages
   let pdfToUse = pdfPath;
   let tempPdfPath = null;
+  let infoPdfPath = null;
 
-  if (config.page_ranges) {
-    // Validate format (should match: digits, hyphens, commas)
-    if (!/^[0-9,-\s]+$/.test(config.page_ranges)) {
-      throw new Error(`Invalid page range format: ${config.page_ranges}. Use format like "1-4,12,17-20"`);
-    }
-    
-    try {
+  try {
+    // Step 1: Handle page ranges if specified
+    if (config.page_ranges) {
+      // Validate format (should match: digits, hyphens, commas)
+      if (!/^[0-9,-\s]+$/.test(config.page_ranges)) {
+        throw new Error(`Invalid page range format: ${config.page_ranges}. Use format like "1-4,12,17-20"`);
+      }
+      
       // Extract the requested pages
       const extractedPdfBuffer = await extractPages(pdfPath, config.page_ranges);
       
       // Create a temporary file
       const fileExt = path.extname(pdfPath);
       const fileName = path.basename(pdfPath, fileExt);
-      tempPdfPath = `${fileName}_extracted_pages${fileExt}`;
+      tempPdfPath = path.join(path.dirname(pdfPath), `${fileName}_extracted_pages${fileExt}`);
       
       // Write the extracted pages to the temporary file
       fs.writeFileSync(tempPdfPath, extractedPdfBuffer);
       
-      // Use the temporary file for printing
+      // Use the temporary file for further processing
       pdfToUse = tempPdfPath;
       
       console.log(`Created PDF with extracted pages: ${tempPdfPath}`);
-    } catch (error) {
-      throw new Error(`Failed to extract pages: ${error.message}`);
     }
-  }
-  
-  // Log the options being used
-  console.log(`Printing ${pdfToUse} with options:`, options);
-  
-  try {
+    
+    // Step 2: Append info page with username, order ID, and print ID
+    const username = config.username || 'N/A';
+    const orderId = config['Order ID'] || 'N/A';
+    
+    infoPdfPath = await appendInfoPage(pdfToUse, username, orderId);
+    pdfToUse = infoPdfPath;
+    
+    // Log the options being used
+    console.log(`Printing ${pdfToUse} with options:`, options);
+    
     // Execute the print job
     const result = await print(pdfToUse, printer, options);
-    
-    // Clean up temporary file if created
-    if (tempPdfPath && fs.existsSync(tempPdfPath)) {
-      fs.unlinkSync(tempPdfPath);
-      console.log(`Cleaned up temporary file: ${tempPdfPath}`);
-    }
-    
     return result;
   } catch (error) {
-    // Clean up temporary file if created, even if printing fails
+    throw error;
+  } finally {
+    // Clean up temporary files
     if (tempPdfPath && fs.existsSync(tempPdfPath)) {
       fs.unlinkSync(tempPdfPath);
       console.log(`Cleaned up temporary file: ${tempPdfPath}`);
     }
     
-    throw error;
+    if (infoPdfPath && fs.existsSync(infoPdfPath)) {
+      fs.unlinkSync(infoPdfPath);
+      console.log(`Cleaned up info page file: ${infoPdfPath}`);
+    }
   }
 }
 
@@ -447,4 +545,4 @@ if (require.main === module) {
 } else {
   // Export for use as a module
   module.exports = { printWithConfig, printQueue };
-} 
+}
