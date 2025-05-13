@@ -26,9 +26,7 @@ const shopkeeperDashboardRoutes = require('./routes/shopkeeperDashboard');
 const jobProcessRoutes = require('./routes/jobProcess');
 const { router: authRoutes } = require('./routes/auth');
 
-// Import services
-const { initChangeStream } = require('./services/changeStreamService');
-const { initWebSocketServer } = require('./services/websocketService');
+
 
 // Initialize Express app
 const app = express();
@@ -62,12 +60,6 @@ async function initializeApp() {
       bucketName: 'pdfs'
     });
     
-    // Initialize MongoDB Change Stream
-    await initChangeStream();
-    
-    // Initialize WebSocket Server
-    initWebSocketServer(server);
-    
     // Import route files
     const shopkeeperRoutes = require('./routes/shopkeepers');
     
@@ -94,7 +86,6 @@ async function initializeApp() {
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log(`WebSocket server available at ws://localhost:${PORT}`);
     });
     
   } catch (err) {
