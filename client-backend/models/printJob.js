@@ -15,7 +15,7 @@ const printJobSchema = new Schema({
     default: () => `ORDER-${Date.now()}-${Math.floor(Math.random() * 10000)}`
   },
   userId: {
-    type: String, // Using string for compatibility with auth providers like Clerk
+    type: String,
     required: true
   },
   username: {
@@ -37,14 +37,16 @@ const printJobSchema = new Schema({
     printConfig: {
       copies: {
         type: Number,
-        default: 1
+        default: 1,
+        min: 1,
+        max: 100
       },
-      colorMode: {
+      color_mode: {
         type: String,
-        enum: ['blackAndWhite', 'color'],
+        enum: ['monochrome', 'color'],
         required: true
       },
-      pageSize: {
+      paper_size: {
         type: String,
         default: 'A4'
       },
@@ -53,20 +55,34 @@ const printJobSchema = new Schema({
         enum: ['portrait', 'landscape'],
         default: 'portrait'
       },
-      duplexPrinting: {
+      duplex: {
         type: Boolean,
         default: false
       },
-      pageRange: {
+      page_ranges: {
         type: String,
         default: 'all'
       },
-      pagesPerSheet: {
+      pages_per_sheet: {
         type: Number,
+        enum: [1, 2, 4, 6],
         default: 1
+      },
+      border: {
+        type: String,
+        enum: ['none', 'single'],
+        default: 'none'
+      },
+      printer: {
+        type: String,
+        default: 'Virtual_PDF_Printer_1'
+      },
+      priority: {
+        type: Number,
+        default: 90
       }
     }
-  }],  // Common configuration for all files in this job
+  }],
   jobConfig: {
     // Any common job configuration can go here
   },

@@ -23,6 +23,13 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
       : 'bg-white border-gray-300 text-gray-900'}
   `;
 
+  const handleCopiesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value) || 1;
+    // Ensure copies is between 1 and 100
+    const validCopies = Math.min(100, Math.max(1, value));
+    onChange({ ...options, copies: validCopies });
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
@@ -52,7 +59,6 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
             <option value="2">2 per page</option>
             <option value="4">4 per page</option>
             <option value="6">6 per page</option>
-            <option value="9">9 per page</option>
           </select>
         </div>
 
@@ -64,10 +70,8 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
             onChange={e => onChange({ ...options, borderStyle: e.target.value as any })}
             className={baseInputClass}
           >
-            <option value="None">No Border</option>
-            <option value="Thin">Thin Border</option>
-            <option value="Medium">Medium Border</option>
-            <option value="Thick">Thick Border</option>
+            <option value="none">No Border</option>
+            <option value="single">Single Border</option>
           </select>
         </div>
 
@@ -77,8 +81,8 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
             onChange={e => onChange({ ...options, orientation: e.target.value as any })}
             className={baseInputClass}
           >
-            <option value="Portrait">Portrait</option>
-            <option value="Landscape">Landscape</option>
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
           </select>
         </div>
 
@@ -99,8 +103,8 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
             onChange={e => onChange({ ...options, colorMode: e.target.value as any })}
             className={baseInputClass}
           >
-            <option value="BlackAndWhite">B&W</option>
-            <option value="Color">Color</option>
+            <option value="monochrome">Black & White</option>
+            <option value="color">Color</option>
           </select>
         </div>
 
@@ -116,8 +120,9 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
           <input
             type="number"
             min="1"
+            max="100"
             value={options.copies}
-            onChange={e => onChange({ ...options, copies: parseInt(e.target.value) || 1 })}
+            onChange={handleCopiesChange}
             className={`${baseInputClass} w-20`}
             placeholder="Copies"
           />

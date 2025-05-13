@@ -119,10 +119,10 @@ router.post('/create', async (req, res) => {
         
         // Process file configs to create file entries
         const fileEntries = fileConfigs.map(fileConfig => {
-          // Map color mode to correct enum value (Fix case sensitivity)
+          // Map color mode to correct enum value
           let colorMode;
-          if (fileConfig.options.colorMode.toLowerCase() === 'blackandwhite') {
-            colorMode = 'blackAndWhite';
+          if (fileConfig.options.colorMode === 'monochrome') {
+            colorMode = 'monochrome';
           } else {
             colorMode = 'color';
           }
@@ -133,13 +133,16 @@ router.post('/create', async (req, res) => {
             fileId: new mongoose.Types.ObjectId(fileConfig.fileId),
             uploadDate: fileConfig.uploadDate,
             printConfig: {
-              copies: fileConfig.options.copies,
-              colorMode: colorMode,
-              pageSize: fileConfig.options.paperSize,
-              orientation: fileConfig.options.orientation || 'portrait',
-              duplexPrinting: fileConfig.options.doubleSided,
-              pageRange: fileConfig.selectedPages,
-              pagesPerSheet: parseInt(fileConfig.options.pagesPerSheet || '1')
+              copies: Math.min(100, Math.max(1, fileConfig.options.copies || 1)),
+              color_mode: colorMode,
+              paper_size: fileConfig.options.paperSize,
+              orientation: fileConfig.options.orientation.toLowerCase(),
+              duplex: fileConfig.options.doubleSided,
+              page_ranges: fileConfig.selectedPages,
+              pages_per_sheet: parseInt(fileConfig.options.pagesPerSheet || '1'),
+              border: fileConfig.options.borderStyle.toLowerCase(),
+              printer: 'Virtual_PDF_Printer_1', // Default printer name
+              priority: orderMetadata.isPriorityOrder ? 50 : 90 // Higher priority (lower number) if marked as priority
             }
           };
         });
@@ -163,8 +166,14 @@ router.post('/create', async (req, res) => {
             created: new Date()
           }
         };
-        
+
+        // Log the final object before saving to database
+        console.log('Print job being saved to database:', JSON.stringify(printJob, null, 2));
+
         const createdJob = await PrintJob.create(printJob);
+
+        // You can also log the saved object to see what MongoDB returns
+        console.log('Saved print job:', JSON.stringify(createdJob, null, 2));
         
         return res.status(201).json({
           success: true,

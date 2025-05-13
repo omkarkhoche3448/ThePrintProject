@@ -37,8 +37,12 @@ import type { PrintFile, PrintOptions } from '../types/print';
 // Default Print Options
 const defaultPrintOptions: PrintOptions = {
   paperSize: 'A4',
-  colorMode: 'BlackAndWhite',
+  colorMode: 'monochrome', // Updated from 'BlackAndWhite' to 'monochrome'
   doubleSided: false,
+  pagesPerSheet: '1',
+  orientation: 'portrait', // Updated from 'Portrait' to 'portrait'
+  borderStyle: 'none', // Updated from 'None' to 'none'
+  pageRange: '',
   copies: 1,
   isPriority: false,
 };

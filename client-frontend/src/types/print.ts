@@ -1,8 +1,8 @@
 export type PaperSize = 'A4' | 'A3' | 'Letter' | 'Legal';
-export type ColorMode = 'Color' | 'BlackAndWhite';
-export type Orientation = 'Portrait' | 'Landscape';
-export type PagesPerSheet = '1' | '2' | '4' | '6' | '9';
-export type BorderStyle = 'None' | 'Thin' | 'Medium' | 'Thick';
+export type ColorMode = 'color' | 'monochrome';
+export type Orientation = 'portrait' | 'landscape';
+export type PagesPerSheet = '1' | '2' | '4' | '6';
+export type BorderStyle = 'none' | 'single';
 
 export interface PrintOptions {
   paperSize: PaperSize;
@@ -34,5 +34,5 @@ export interface PageSelectorProps {
   pageCount: number;
   value: string;
   onChange: (pages: string) => void;
-  isDarkTheme?: boolean; // Add this line to include the isDarkTheme prop
+  isDarkTheme?: boolean;
 }
