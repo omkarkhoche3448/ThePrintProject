@@ -35,10 +35,9 @@ router.get('/:shopkeeperId/print-jobs', async (req, res) => {
     
     // Get the PrintJob model
     const PrintJob = mongoose.model('PrintJob');
-    
-    // Execute the query with pagination and only fetch necessary fields
+      // Execute the query with pagination and only fetch necessary fields
     const printJobs = await PrintJob.find(query)
-      .select('jobId file.filename pricing.totalAmount status timeline createdAt')
+      .select('jobId orderId files username userId pricing.totalAmount status timeline createdAt')
       .sort({ createdAt: -1 }) // Newest first
       .skip(skip)
       .limit(limit);
@@ -49,8 +48,12 @@ router.get('/:shopkeeperId/print-jobs', async (req, res) => {
     // Transform data to return simplified info
     const simplifiedJobs = printJobs.map(job => ({
       jobId: job.jobId,
+      orderId: job.orderId,
+      username: job.username || 'Unknown User',
+      userId: job.userId,
       amount: job.pricing?.totalAmount || 0,
-      fileName: job.file?.filename || 'Unknown file',
+      fileCount: job.files?.length || 0,
+      fileNames: job.files?.map(file => file.filename).join(', ') || 'Unknown file',
       status: job.status,
       createdAt: job.createdAt || job.timeline?.created,
     }));
@@ -81,8 +84,13 @@ router.get('/print-jobs/:jobId', async (req, res) => {
     // Get the PrintJob model
     const PrintJob = mongoose.model('PrintJob');
     
-    // Find by jobId string
-    const printJob = await PrintJob.findOne({ jobId });
+    // Find by jobId string or orderId
+    const printJob = await PrintJob.findOne({
+      $or: [
+        { jobId },
+        { orderId: jobId }
+      ]
+    });
     
     if (!printJob) {
       return res.status(404).json({

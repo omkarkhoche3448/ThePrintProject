@@ -17,7 +17,13 @@ router.put('/:jobId/execute', async (req, res) => {
     const PrintJob = mongoose.model('PrintJob');
     
     // Find the job and make sure it's in pending state
-    const job = await PrintJob.findOne({ jobId, status: 'pending' });
+    const job = await PrintJob.findOne({ 
+      $or: [
+        { jobId: jobId }, 
+        { orderId: jobId }  // Allow finding by either jobId or orderId
+      ],
+      status: 'pending' 
+    });
     
     if (!job) {
       return res.status(404).json({
@@ -41,7 +47,7 @@ router.put('/:jobId/execute', async (req, res) => {
         recipient: 'user',
         recipientId: job.userId,
         title: 'Print Job Processing',
-        message: `Your print job (${jobId}) is now being processed`,
+        message: `Your order #${job.orderId} is now being processed`,
         type: 'order_update',
         relatedTo: {
           model: 'PrintJob',

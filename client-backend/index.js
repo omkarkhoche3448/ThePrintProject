@@ -89,9 +89,7 @@ async function initializeApp() {
     // Basic route for testing
     app.get('/', (req, res) => {
       res.send('Printing Automation API is running');
-    });
-    
-    // Start the server
+    });    // Start the server
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

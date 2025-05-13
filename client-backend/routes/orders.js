@@ -111,13 +111,14 @@ router.post('/create', async (req, res) => {
             readStream.pipe(uploadStream);
           });
         });
-        
-        // Wait for all files to be uploaded to GridFS
+          // Wait for all files to be uploaded to GridFS
         await Promise.all(uploadPromises);
         
-        // Create print jobs in database
+        // Create a single print job in database with multiple files
         const PrintJob = mongoose.model('PrintJob');
-        const printJobs = fileConfigs.map(fileConfig => {
+        
+        // Process file configs to create file entries
+        const fileEntries = fileConfigs.map(fileConfig => {
           // Map color mode to correct enum value (Fix case sensitivity)
           let colorMode;
           if (fileConfig.options.colorMode.toLowerCase() === 'blackandwhite') {
@@ -125,45 +126,52 @@ router.post('/create', async (req, res) => {
           } else {
             colorMode = 'color';
           }
-
+          
           return {
-            // Store the Clerk user ID as a string instead of trying to cast to ObjectId
-            userId: orderMetadata.userId,
-            shopkeeperId: new mongoose.Types.ObjectId(orderMetadata.shopkeeperId),
-            file: {
-              filename: fileConfig.fileName,
-              originalName: fileConfig.fileName,
-              fileId: new mongoose.Types.ObjectId(fileConfig.fileId),
-              uploadDate: fileConfig.uploadDate
-            },
+            filename: fileConfig.fileName,
+            originalName: fileConfig.fileName,
+            fileId: new mongoose.Types.ObjectId(fileConfig.fileId),
+            uploadDate: fileConfig.uploadDate,
             printConfig: {
               copies: fileConfig.options.copies,
-              // Use the properly formatted enum value
               colorMode: colorMode,
               pageSize: fileConfig.options.paperSize,
               orientation: fileConfig.options.orientation || 'portrait',
               duplexPrinting: fileConfig.options.doubleSided,
               pageRange: fileConfig.selectedPages,
               pagesPerSheet: parseInt(fileConfig.options.pagesPerSheet || '1')
-            },
-            status: 'pending',
-            payment: {
-              status: 'pending',
-              method: 'online'
-            },
-            timeline: {
-              created: new Date()
             }
           };
         });
+
+        // Create single print job with all files
+        const printJob = {
+          // Generate a custom orderId that can be displayed to users
+          orderId: `ORDER-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          // Store the Clerk user ID as a string instead of trying to cast to ObjectId
+          userId: orderMetadata.userId,
+          // Include username from order metadata
+          username: orderMetadata.username || 'Anonymous User', // Add fallback in case username is missing
+          shopkeeperId: new mongoose.Types.ObjectId(orderMetadata.shopkeeperId),
+          files: fileEntries,
+          status: 'pending',
+          payment: {
+            status: 'pending',
+            method: 'online'
+          },
+          timeline: {
+            created: new Date()
+          }
+        };
         
-        const createdJobs = await PrintJob.insertMany(printJobs);
+        const createdJob = await PrintJob.create(printJob);
         
         return res.status(201).json({
           success: true,
-          orderId: createdJobs[0]._id,
+          orderId: createdJob.orderId, // Return the custom orderId instead of _id
+          jobId: createdJob._id,
           message: 'Order created successfully',
-          jobs: createdJobs
+          job: createdJob
         });
       } catch (error) {
         // Clean up any temp files on error

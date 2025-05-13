@@ -9,8 +9,17 @@ const printJobSchema = new Schema({
     unique: true,
     default: () => `JOB-${Date.now()}-${Math.floor(Math.random() * 10000)}`
   },
+  orderId: {
+    type: String,
+    required: true,
+    default: () => `ORDER-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+  },
   userId: {
-    type: String, // Change from Schema.Types.ObjectId to String
+    type: String, // Using string for compatibility with auth providers like Clerk
+    required: true
+  },
+  username: {
+    type: String,
     required: true
   },
   shopkeeperId: {
@@ -18,45 +27,48 @@ const printJobSchema = new Schema({
     ref: 'Shopkeeper',
     required: true
   },
-  file: {
+  files: [{
     filename: String,
     originalName: String,
     contentType: String,
     size: Number,
     uploadDate: Date,
-    fileId: Schema.Types.ObjectId
-  },
-  printConfig: {
-    copies: {
-      type: Number,
-      default: 1
-    },
-    colorMode: {
-      type: String,
-      enum: ['blackAndWhite', 'color'],
-      required: true
-    },
-    pageSize: {
-      type: String,
-      default: 'A4'
-    },
-    orientation: {
-      type: String,
-      enum: ['portrait', 'landscape'],
-      default: 'portrait'
-    },
-    duplexPrinting: {
-      type: Boolean,
-      default: false
-    },
-    pageRange: {
-      type: String,
-      default: 'all'
-    },
-    pagesPerSheet: {
-      type: Number,
-      default: 1
+    fileId: Schema.Types.ObjectId,
+    printConfig: {
+      copies: {
+        type: Number,
+        default: 1
+      },
+      colorMode: {
+        type: String,
+        enum: ['blackAndWhite', 'color'],
+        required: true
+      },
+      pageSize: {
+        type: String,
+        default: 'A4'
+      },
+      orientation: {
+        type: String,
+        enum: ['portrait', 'landscape'],
+        default: 'portrait'
+      },
+      duplexPrinting: {
+        type: Boolean,
+        default: false
+      },
+      pageRange: {
+        type: String,
+        default: 'all'
+      },
+      pagesPerSheet: {
+        type: Number,
+        default: 1
+      }
     }
+  }],  // Common configuration for all files in this job
+  jobConfig: {
+    // Any common job configuration can go here
   },
   status: {
     type: String,

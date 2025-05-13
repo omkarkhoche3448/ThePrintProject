@@ -28,7 +28,75 @@ The system consists of the following main components:
 
 ### PrintJob
 
-The core model that represents a print job:
+The core model that represents a print job with multiple files:
+
+```javascript
+{
+  jobId: "JOB-1714408621019-1234", // Unique job identifier
+  orderId: "ORDER-1714408621019-5678", // Customer-facing order ID
+  userId: "user_2MmGQDBxyz123", // User ID (string, can be from auth system)
+  username: "John Doe", // User's display name
+  shopkeeperId: ObjectId("6451f61b8b35f734c99b8d13"),
+  files: [
+    {
+      filename: "document1.pdf",
+      originalName: "resume.pdf",
+      fileId: ObjectId("6451f6278b35f734c99b8d15"),
+      uploadDate: "2023-05-03T05:23:51.019Z",
+      printConfig: {
+        copies: 2,
+        colorMode: "blackAndWhite",
+        pageSize: "A4",
+        orientation: "portrait",
+        duplexPrinting: true,
+        pageRange: "all",
+        pagesPerSheet: 1
+      }
+    },
+    {
+      filename: "document2.pdf",
+      originalName: "invoice.pdf",
+      fileId: ObjectId("6451f6278b35f734c99b8d16"),
+      uploadDate: "2023-05-03T05:23:51.019Z",
+      printConfig: {
+        copies: 1,
+        colorMode: "color",
+        pageSize: "A4",
+        orientation: "landscape",
+        duplexPrinting: false,
+        pageRange: "1-5",
+        pagesPerSheet: 2
+      }
+    }
+  ],
+  status: "pending", // pending, processing, completed, cancelled, failed
+  pricing: {
+    baseCost: 50,
+    discount: 0,
+    taxAmount: 9,
+    totalAmount: 59
+  },
+  payment: {
+    status: "pending",
+    razorpayOrderId: "order_MBsXXXXXXXX",
+    method: "online"
+  },
+  timeline: {
+    created: "2023-05-03T05:23:51.019Z",
+    paid: null,
+    processing: null,
+    ready: null,
+    completed: null
+  },
+  deliveryMethod: "pickup"
+}
+```
+
+Key improvements in the new model:
+- Single job/order contains multiple files
+- Customer-friendly order ID displayed to users
+- Username included along with user ID
+- Each file has its own print configuration
 
 - `jobId`: Unique identifier for the job
 - `userId`: User who created the job

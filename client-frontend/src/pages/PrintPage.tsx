@@ -216,7 +216,6 @@ function PrintPage() {
       }))
     );
   }, [globalOptions]);
-
   // Checkout Handler
   const handleCheckout = useCallback(async () => {
     if (!user || !selectedShopkeeper) {
@@ -232,7 +231,7 @@ function PrintPage() {
       // Add order metadata
       const orderMetadata = {
         userId: user.id,
-        userName: user.fullName || user.username,
+        username: user.fullName || user.username, // Changed to username to match the backend model
         userEmail: user.emailAddresses[0]?.emailAddress,
         shopkeeperId: selectedShopkeeper._id,
         isPriorityOrder,
@@ -258,7 +257,7 @@ function PrintPage() {
       });
   
       // Send the request to your backend
-      const response = await fetch(`http://localhost:3000/orders/create`, {
+      const response = await fetch(`http://localhost:3000/orders/create`, { // Updated port to match the new backend port
         method: 'POST',
         body: formData
       });

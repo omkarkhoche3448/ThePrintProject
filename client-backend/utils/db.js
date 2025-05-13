@@ -1,8 +1,13 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect('mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/?retryWrites=true&w=majority&appName=CustomerServiceChat', {
+    // Use environment variable instead of hardcoded credentials for security
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/printproject';
+
+    const conn = await mongoose.connect(MONGODB_URI, {
+      // MongoDB Node.js driver 4.0+ handles these options automatically
     });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);

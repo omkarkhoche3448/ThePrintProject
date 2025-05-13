@@ -41,6 +41,7 @@ interface OrderFile {
   originalName: string;
   uploadDate: string;
   fileId: string;
+  printConfig: PrintConfig; // Each file now has its own print config
 }
 
 interface ShopkeeperInfo {
@@ -57,10 +58,13 @@ interface ShopkeeperInfo {
 
 interface Order {
   _id: string;
+  jobId: string;
+  orderId: string; // New field for customer-facing order ID
   userId: string;
+  username: string; // New field for user's name
   shopkeeperId: ShopkeeperInfo;
-  file: OrderFile;
-  printConfig: PrintConfig;
+  files: OrderFile[]; // Changed from singular file to files array
+  jobConfig?: any; // Optional common job configuration
   status: string;
   payment: {
     status: string;
@@ -113,7 +117,6 @@ const OrdersPage: React.FC = () => {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkTheme]);
-
   // Fetch orders
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -196,7 +199,11 @@ const OrdersPage: React.FC = () => {
 
   // Check if any order in a group is a priority order
   const isGroupPriority = (orderGroup: Order[]): boolean => {
-    return orderGroup.some(order => order.printConfig.isPriority);
+    return orderGroup.some(order => {
+      // Check if any file in the order has priority printing
+      if (!order.files) return false;
+      return order.files.some(file => file.printConfig?.isPriority);
+    });
   };
 
   // Get overall status for a group of orders
@@ -235,7 +242,16 @@ const OrdersPage: React.FC = () => {
       hour12: true
     }).format(date);
   };
+  // Helper functions for order details
+  const getMainFileFromOrder = (order: Order) => {
+    return order.files && order.files.length > 0 ? order.files[0] : null;
+  };
 
+  const getPrintConfigFromOrder = (order: Order) => {
+    const mainFile = getMainFileFromOrder(order);
+    return mainFile ? mainFile.printConfig : null;
+  };
+  
   // Get status icon and color
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -632,12 +648,13 @@ const OrdersPage: React.FC = () => {
                   Try Again
                 </motion.button>
               </motion.div>
-            ) : selectedOrder ? (
-              <OrderDetails 
+            ) : selectedOrder ? (              <OrderDetails 
                 order={selectedOrder} 
                 isDarkTheme={isDarkTheme}
                 formatDate={formatDate}
                 getStatusInfo={getStatusInfo}
+                getMainFileFromOrder={getMainFileFromOrder}
+                getPrintConfigFromOrder={getPrintConfigFromOrder}
               />
             ) : (
               <motion.div 
@@ -754,19 +771,19 @@ const OrdersPage: React.FC = () => {
                             
                             <div className={`mb-4 pb-4 border-b 
                               ${isDarkTheme ? 'border-white/10' : 'border-black/10'}`}
-                            >
-                              <div className="flex items-center mb-2">
-                                <Printer className={`h-4 w-4 mr-2 
-                                  ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} 
-                                />
-                                <span className={`text-sm 
-                                  ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
-                                >
-                                  {firstOrder.printConfig.copies} {firstOrder.printConfig.copies > 1 ? 'copies' : 'copy'}, {' '}
-                                  {firstOrder.printConfig.colorMode === 'blackAndWhite' ? 'B&W' : 'Color'}, {' '}
-                                  {firstOrder.printConfig.pageSize}
-                                </span>
-                              </div>
+                            >                              {getPrintConfigFromOrder(firstOrder) && (
+                                <div className="flex items-center mb-2">
+                                  <Printer className={`h-4 w-4 mr-2 
+                                    ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} 
+                                  />
+                                  <span className={`text-sm 
+                                    ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
+                                  >                                    {getMainFileFromOrder(firstOrder)?.printConfig?.copies || 1} {(getMainFileFromOrder(firstOrder)?.printConfig?.copies || 1) > 1 ? 'copies' : 'copy'}, {' '}
+                                    {(getMainFileFromOrder(firstOrder)?.printConfig?.colorMode || 'blackAndWhite') === 'blackAndWhite' ? 'B&W' : 'Color'}, {' '}
+                                    {getMainFileFromOrder(firstOrder)?.printConfig?.pageSize || 'A4'}
+                                  </span>
+                                </div>
+                              )}
                               
                               <div className="flex items-center">
                                 <Calendar className={`h-4 w-4 mr-2 
@@ -786,15 +803,16 @@ const OrdersPage: React.FC = () => {
                                 ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
                               >
                                 Files
-                              </p>
-                              <ul className={`text-xs space-y-1.5 
+                              </p>                              <ul className={`text-xs space-y-1.5 
                                 ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}
                               >
                                 {orderGroup.map((order, i) => (
-                                  <li key={i} className="truncate flex items-center">
-                                    <FileText className="h-3 w-3 mr-1.5 flex-shrink-0" />
-                                    {order.file.originalName}
-                                  </li>
+                                  order.files && order.files.map((file, j) => (
+                                    <li key={`${i}-${j}`} className="truncate flex items-center">
+                                      <FileText className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                                      {file.originalName}
+                                    </li>
+                                  ))
                                 ))}
                               </ul>
                             </div>
@@ -848,15 +866,21 @@ interface OrderDetailsProps {
     border: string;
     label: string;
   };
+  getMainFileFromOrder: (order: Order) => OrderFile | null;
+  getPrintConfigFromOrder: (order: Order) => PrintConfig | null;
 }
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ 
   order, 
   isDarkTheme,
   formatDate,
-  getStatusInfo
+  getStatusInfo,
+  getMainFileFromOrder,
+  getPrintConfigFromOrder
 }) => {
   const statusInfo = getStatusInfo(order.status);
+  const mainFile = getMainFileFromOrder(order);
+  const printConfig = getPrintConfigFromOrder(order);
   
   // Steps for the order process
   const steps = [
@@ -1001,63 +1025,63 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
         >
           <h3 className="text-xl font-medium mb-6">Document Details</h3>
           
-          <div className={`space-y-4 ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>
-            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
-              <div className="flex items-start mb-2">
-                <FileText className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium mb-1">File Name</p>
-                  <p className="text-sm break-words">{order.file.originalName}</p>
+          <div className={`space-y-4 ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>            {order.files && order.files.map((file, index) => (
+              <div key={index} className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+                <div className="flex items-start mb-2">
+                  <FileText className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium mb-1">File {index + 1}</p>
+                    <p className="text-sm break-words">{file.originalName}</p>
+                    <p className="text-sm mt-1">
+                      <span className="text-xs text-white/50">Uploaded: </span>
+                      {formatDate(file.uploadDate)}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start">
-                <Calendar className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium mb-1">Upload Date</p>
-                  <p className="text-sm">{formatDate(order.file.uploadDate)}</p>
-                </div>
-              </div>
-            </div>
+            ))}
             
-            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
-              <h4 className="text-sm font-medium mb-3">Print Configuration</h4>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Color Mode</p>
-                  <p className="font-medium">
-                    {order.printConfig.colorMode === 'blackAndWhite' ? 'Black & White' : 'Color'}
-                  </p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Paper Size</p>
-                  <p className="font-medium">{order.printConfig.pageSize}</p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Orientation</p>
-                  <p className="font-medium capitalize">{order.printConfig.orientation}</p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Double-sided</p>
-                  <p className="font-medium">{order.printConfig.duplexPrinting ? 'Yes' : 'No'}</p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages</p>
-                  <p className="font-medium">{order.printConfig.pageRange}</p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Copies</p>
-                  <p className="font-medium">{order.printConfig.copies}</p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages Per Sheet</p>
-                  <p className="font-medium">{order.printConfig.pagesPerSheet}</p>
-                </div>
-                <div>
-                  <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Priority</p>
-                  <p className="font-medium">{order.printConfig.isPriority ? 'Yes' : 'No'}</p>
+            {mainFile && printConfig && (
+              <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
+                <h4 className="text-sm font-medium mb-3">Print Configuration</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Color Mode</p>
+                    <p className="font-medium">
+                      {printConfig.colorMode === 'blackAndWhite' ? 'Black & White' : 'Color'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Paper Size</p>
+                    <p className="font-medium">{printConfig.pageSize}</p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Orientation</p>
+                    <p className="font-medium capitalize">{printConfig.orientation}</p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Double-sided</p>
+                    <p className="font-medium">{printConfig.duplexPrinting ? 'Yes' : 'No'}</p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages</p>
+                    <p className="font-medium">{printConfig.pageRange}</p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Copies</p>
+                    <p className="font-medium">{printConfig.copies}</p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages Per Sheet</p>
+                    <p className="font-medium">{printConfig.pagesPerSheet}</p>
+                  </div>
+                  <div>
+                    <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Priority</p>
+                    <p className="font-medium">{printConfig.isPriority ? 'Yes' : 'No'}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
         
@@ -1124,10 +1148,13 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                   </div>
                 </div>
               </div>
-              
-              <div className="flex items-start">
+                <div className="flex items-start">
                 <User className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
                 <div className="flex-1">
+                  <div className="flex justify-between mb-2">
+                    <p className="text-sm font-medium">Customer</p>
+                    <p className="text-sm">{order.username || 'Anonymous'}</p>
+                  </div>
                   <div className="flex justify-between">
                     <p className="text-sm font-medium">Delivery Method</p>
                     <p className="text-sm capitalize">{order.deliveryMethod}</p>
