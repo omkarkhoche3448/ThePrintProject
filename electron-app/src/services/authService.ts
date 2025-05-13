@@ -16,11 +16,9 @@ export interface ShopkeeperRegistrationData {
   printCosts?: {
     blackAndWhite: number;
     color: number;
-  };
-  discountRules?: Array<{
-    type: string;
-    value: number;
-    threshold?: number;
+  };  discountRules?: Array<{
+    discountPercentage: number;
+    minimumOrderAmount: number;
   }>;
   shopHours?: {
     monday?: { open: string; close: string };
@@ -31,6 +29,7 @@ export interface ShopkeeperRegistrationData {
     saturday?: { open: string; close: string };
     sunday?: { open: string; close: string };
   };
+  priorityRate?: number; // Added priorityRate field for express printing service pricing multiplier
 }
 
 export interface LoginData {
@@ -47,6 +46,7 @@ export interface ShopkeeperData {
   printCosts?: any;
   discountRules?: any[];
   shopHours?: any;
+  priorityRate?: number;
 }
 
 export interface AuthResponse {

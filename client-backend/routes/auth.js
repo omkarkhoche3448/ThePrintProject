@@ -13,7 +13,17 @@ const { protect } = require('../middleware/auth');
  */
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, phoneNumber, password, address, printCosts, discountRules, shopHours } = req.body;
+    const { 
+      name, 
+      email, 
+      phoneNumber, 
+      password, 
+      address, 
+      printCosts, 
+      discountRules, 
+      shopHours,
+      priorityRate 
+    } = req.body;
     
     // Check if MongoDB is connected
     if (mongoose.connection.readyState !== 1) {
@@ -43,16 +53,48 @@ router.post('/register', async (req, res) => {
       });
     }
     
-    // Create shopkeeper
+    // Default values for all fields
+    const defaultAddress = {
+      street: "123 Main St",
+      city: "Mumbai",
+      state: "Maharashtra",
+      pincode: "400001",
+      country: "India"
+    };
+    
+    const defaultPrintCosts = {
+      blackAndWhite: 2,
+      color: 5
+    };
+    
+    const defaultDiscountRules = [
+      {
+        discountPercentage: 10,
+        minimumOrderAmount: 100
+      }
+    ];
+    
+    const defaultShopHours = {
+      monday: { open: "09:00", close: "21:00" },
+      tuesday: { open: "09:00", close: "21:00" },
+      wednesday: { open: "09:00", close: "21:00" },
+      thursday: { open: "09:00", close: "21:00" },
+      friday: { open: "09:00", close: "21:00" },
+      saturday: { open: "10:00", close: "20:00" },
+      sunday: { open: "Closed", close: "Closed" }
+    };
+    
+    // Create shopkeeper with provided values or defaults
     const shopkeeper = new Shopkeeper({
       name,
       email,
       phoneNumber,
       password,
-      address: address || {}, // Default to empty object if not provided
-      printCosts: printCosts || { blackAndWhite: 1, color: 5 }, // Default values
-      discountRules: discountRules || [],
-      shopHours: shopHours || {}
+      address: address || defaultAddress,
+      printCosts: printCosts || defaultPrintCosts,
+      discountRules: discountRules || defaultDiscountRules,
+      shopHours: shopHours || defaultShopHours,
+      priorityRate: priorityRate || 1.1
     });
     
     // Save shopkeeper
@@ -69,7 +111,12 @@ router.post('/register', async (req, res) => {
         id: shopkeeper._id,
         name: shopkeeper.name,
         email: shopkeeper.email,
-        phoneNumber: shopkeeper.phoneNumber
+        phoneNumber: shopkeeper.phoneNumber,
+        address: shopkeeper.address,
+        printCosts: shopkeeper.printCosts,
+        discountRules: shopkeeper.discountRules,
+        shopHours: shopkeeper.shopHours,
+        priorityRate: shopkeeper.priorityRate
       }
     });
     
@@ -119,8 +166,7 @@ router.post('/login', async (req, res) => {
         message: 'Invalid credentials'
       });
     }
-    
-    // Generate JWT token
+      // Generate JWT token
     const token = generateToken(shopkeeper._id);
     
     res.status(200).json({
@@ -130,7 +176,12 @@ router.post('/login', async (req, res) => {
         id: shopkeeper._id,
         name: shopkeeper.name,
         email: shopkeeper.email,
-        phoneNumber: shopkeeper.phoneNumber
+        phoneNumber: shopkeeper.phoneNumber,
+        address: shopkeeper.address,
+        printCosts: shopkeeper.printCosts,
+        discountRules: shopkeeper.discountRules,
+        shopHours: shopkeeper.shopHours,
+        priorityRate: shopkeeper.priorityRate
       }
     });
     
@@ -173,7 +224,7 @@ router.get('/me', protect, async (req, res) => {
  */
 router.put('/me', protect, async (req, res) => {
   try {
-    const { name, email, phoneNumber, address, printCosts, discountRules, shopHours } = req.body;
+    const { name, email, phoneNumber, address, printCosts, discountRules, shopHours, priorityRate } = req.body;
     
     // Fields to update
     const fieldsToUpdate = {};
@@ -184,6 +235,7 @@ router.put('/me', protect, async (req, res) => {
     if (printCosts) fieldsToUpdate.printCosts = printCosts;
     if (discountRules) fieldsToUpdate.discountRules = discountRules;
     if (shopHours) fieldsToUpdate.shopHours = shopHours;
+    if (priorityRate) fieldsToUpdate.priorityRate = priorityRate;
     
     // Update shopkeeper
     const Shopkeeper = mongoose.model('Shopkeeper');
