@@ -23,20 +23,61 @@ const createWindow = (): void => {
       nodeIntegration: false,
       contextIsolation: true,
     },
-  });
+  });  // Attempt to open DevTools immediately
+  try {
+    mainWindow.webContents.openDevTools();
+    console.log('Opened DevTools immediately');
+  } catch (e) {
+    console.error('Failed to open DevTools immediately:', e);
+  }
 
   // Load the application
   if (isDevelopment) {
     // In development mode, load from the dev server
-    mainWindow.loadURL("http://localhost:8080");
-    // Only open dev tools if explicitly needed for debugging
-    // Comment this line out to prevent extra window
-    // mainWindow.webContents.openDevTools();
+    mainWindow.loadURL("http://localhost:8080").catch((e) => {
+      console.error('Failed to load dev URL:', e);
+    }).finally(() => {
+      // Try opening DevTools again after URL load
+      mainWindow?.webContents.openDevTools();
+    });
   } else {
     // In production mode, load the built app
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+    
+    // Try opening DevTools again after file load
+    mainWindow.webContents.openDevTools();
   }
+
+  // Try at every possible event
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Window finished loading, opening DevTools');
+    mainWindow?.webContents.openDevTools();
+  });
+
+  mainWindow.webContents.on('dom-ready', () => {
+    console.log('DOM ready, opening DevTools');
+    mainWindow?.webContents.openDevTools();
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    console.log('Window ready to show, opening DevTools');
+    mainWindow?.webContents.openDevTools();
+  });
+  
+  // Multiple attempts with increasing delays
+  [500, 1000, 2000, 3000, 5000].forEach(delay => {
+    setTimeout(() => {
+      try {
+        if (mainWindow && !mainWindow.webContents.isDevToolsOpened()) {
+          console.log(`Trying to open DevTools after ${delay}ms`);
+          mainWindow.webContents.openDevTools();
+        }
+      } catch (error) {
+        console.error(`Failed to open DevTools after ${delay}ms:`, error);
+      }
+    }, delay);
+  });
 };
 
 // This method will be called when Electron has finished

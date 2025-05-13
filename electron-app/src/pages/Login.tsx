@@ -1,26 +1,66 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    navigate('/dashboard');
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Simple validation
-    if (email && password) {
-      // Here you would typically authenticate the user
-      // For demo purposes, we'll just redirect to the dashboard
-      navigate('/dashboard');
-    } else {
-      alert('Please enter both email and password');
+    if (!email || !password) {
+      toast({
+        title: "Login Error",
+        description: "Please enter both email and password",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const response = await login(email, password);
+      
+      if (response.success) {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back to Print Project!"
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: "Login Failed",
+          description: response.message || "Invalid credentials",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Login Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,11 +130,18 @@ const Login = () => {
             </div>
           </div>
 
-          <Button type="submit" className="w-full">Sign In</Button>
-
-          <div className="text-center text-sm">
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
+          </Button>          <div className="text-center text-sm">
             <p className="text-gray-600">
-              Don't have an account? <a href="#" className="text-primary font-medium hover:underline">Sign up</a>
+              Don't have an account? <a onClick={() => navigate('/register')} className="text-primary font-medium hover:underline cursor-pointer">Sign up</a>
             </p>
           </div>
         </form>

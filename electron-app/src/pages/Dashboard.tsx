@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart3, DollarSign, FileText } from 'lucide-react';
 import Sidebar from '../components/Dashboard/Sidebar';
 import Header from '../components/Dashboard/Header';
@@ -6,6 +6,7 @@ import StatsCard from '../components/Dashboard/StatsCard';
 import PrinterCard from '../components/Dashboard/PrinterCard';
 import PrintJob from '../components/Dashboard/PrintJob';
 import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/context/AuthContext';
 import { 
   AlertDialog,
   AlertDialogAction, 
@@ -24,6 +25,20 @@ const Dashboard = () => {
   const [dialogMessage, setDialogMessage] = useState('');
   const [dialogTitle, setDialogTitle] = useState('');
   const [onlinePrinterCount, setOnlinePrinterCount] = useState(5); // All printers are initially online
+  const { user } = useAuth();
+
+  // Add loading state for API data
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading data from API
+  useEffect(() => {
+    // In a real app, this would be where you'd fetch print jobs and printer data from your API
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sample printer data
   const printers = [
@@ -66,11 +81,21 @@ const Dashboard = () => {
     setShowDialog(true);
   };
 
+  // Loading state JSX
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p className="text-gray-500">Loading shop data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-background font-gemini">      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
       <div className={`flex-1 p-8 transition-all duration-300 ${sidebarCollapsed ? 'ml-3' : 'ml-6'}`}>
-        <Header />
+        <Header userName={user?.name} />
         
         <div className="flex items-center mb-6">
           <h2 className="text-lg font-semibold mr-4">Automation</h2>

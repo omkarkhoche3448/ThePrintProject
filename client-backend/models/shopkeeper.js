@@ -1,6 +1,7 @@
 // models/shopkeeper.js
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const bcrypt = require('bcryptjs');
 
 const shopkeeperSchema = new Schema({
   name: {
@@ -46,8 +47,7 @@ const shopkeeperSchema = new Schema({
     friday: { open: String, close: String },
     saturday: { open: String, close: String },
     sunday: { open: String, close: String }
-  },
-  active: {
+  },  active: {
     type: Boolean,
     default: true
   },
@@ -56,8 +56,35 @@ const shopkeeperSchema = new Schema({
     required: true,
     default: 1.0,
     min: 1.0
-  }
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 }, { timestamps: true });
+
+// Method to check if password is valid
+shopkeeperSchema.methods.isValidPassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
+};
+
+// Pre-save hook to hash password before saving
+shopkeeperSchema.pre('save', async function(next) {
+  // Only hash the password if it has been modified or is new
+  if (!this.isModified('password')) return next();
+  
+  try {
+    // Generate salt
+    const salt = await bcrypt.genSalt(10);
+    // Hash password
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model('Shopkeeper', shopkeeperSchema);
 

@@ -24,6 +24,7 @@ const connectDB = require('./utils/db');
 const orderRoutes = require('./routes/orders');
 const shopkeeperDashboardRoutes = require('./routes/shopkeeperDashboard');
 const jobProcessRoutes = require('./routes/jobProcess');
+const { router: authRoutes } = require('./routes/auth');
 
 // Import services
 const { initChangeStream } = require('./services/changeStreamService');
@@ -79,9 +80,9 @@ async function initializeApp() {
         });
       }
       next();
-    };
-      // Use routes
+    };      // Use routes
     app.use('/api/shopkeepers', checkDbConnection, shopkeeperRoutes);
+    app.use('/api/auth', checkDbConnection, authRoutes);
     app.use('/orders', checkDbConnection, orderRoutes);
     app.use('/shopkeeper-dashboard', checkDbConnection, shopkeeperDashboardRoutes);
     app.use('/job-process', checkDbConnection, jobProcessRoutes);

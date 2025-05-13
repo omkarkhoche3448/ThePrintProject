@@ -8,8 +8,11 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from "./context/AuthContext";
 import "./App.css";
 
 // Function to detect if app is running in Electron
@@ -44,13 +47,19 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/index" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/documents" element={<Navigate to="/dashboard" />} />
-            <Route path="/calendar" element={<Navigate to="/dashboard" />} />
-            <Route path="/printers" element={<Navigate to="/settings" />} />
-            <Route path="/help" element={<Navigate to="/settings" />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/documents" element={<Navigate to="/dashboard" />} />
+              <Route path="/calendar" element={<Navigate to="/dashboard" />} />
+              <Route path="/printers" element={<Navigate to="/settings" />} />
+              <Route path="/help" element={<Navigate to="/settings" />} />
+            </Route>
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

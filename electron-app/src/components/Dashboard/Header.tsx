@@ -1,12 +1,21 @@
 
-import { Search, Bell, User } from 'lucide-react';
+import { Search, Bell } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import UserMenu from './UserMenu';
 
-const Header = () => {
+interface HeaderProps {
+  userName?: string;
+}
+
+const Header = ({ userName }: HeaderProps) => {
+  const { user } = useAuth();
+  const displayName = userName || user?.name || 'Shopkeeper';
+  
   return (
     <div className="flex justify-between items-center mb-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Hello, John!</h1>
-        <p className="text-sm text-gray-600 mt-1">Explore information and activity about your property</p>
+        <h1 className="text-2xl font-bold text-gray-800">Hello, {displayName}!</h1>
+        <p className="text-sm text-gray-600 mt-1">Explore information and activity about your print shop</p>
       </div>
       <div className="flex items-center space-x-3">
         <div className="relative">
@@ -21,10 +30,7 @@ const Header = () => {
         </div>
         <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
           <Bell className="h-5 w-5 text-gray-600" />
-        </button>
-        <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
-          <User className="h-5 w-5 text-gray-600" />
-        </button>
+        </button>        <UserMenu />
       </div>
     </div>
   );
