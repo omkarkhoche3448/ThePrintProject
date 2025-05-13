@@ -54,12 +54,25 @@ const initChangeStream = async () => {
         } else if (change.operationType === 'update') {
           // For updated print jobs
           const updatedJob = change.fullDocument;
-          
-          printJobEvents.emit('updatedPrintJob', {
+            printJobEvents.emit('updatedPrintJob', {
             shopkeeperId: updatedJob.shopkeeperId?.toString(),
             job: {
               jobId: updatedJob.jobId,
               status: updatedJob.status,
+              fileName: updatedJob.file?.filename || 'Unknown file',
+              amount: updatedJob.pricing?.totalAmount || 0,
+              updatedAt: new Date()
+            }
+          });
+          
+          // Emit additional specific status events for easier filtering on client side
+          printJobEvents.emit(`printJob_${updatedJob.status}`, {
+            shopkeeperId: updatedJob.shopkeeperId?.toString(),
+            job: {
+              jobId: updatedJob.jobId,
+              status: updatedJob.status,
+              fileName: updatedJob.file?.filename || 'Unknown file',
+              amount: updatedJob.pricing?.totalAmount || 0,
               updatedAt: new Date()
             }
           });

@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const Shopkeeper = mongoose.model('Shopkeeper');
+const Shopkeeper = require('../models/shopkeeper');
 
 /**
  * Get shopkeeper details by ID
@@ -106,13 +106,14 @@ router.get('/', async (req, res) => {
  * @body {Object} shopkeeper - Shopkeeper details including name, printCosts, discountRules, shopHours, and address
  * @returns {Object} Newly created shopkeeper
  */
-router.post('/', async (req, res) => {
-  try {
-    const { name, printCosts, discountRules, shopHours, address } = req.body;
+router.post('/', async (req, res) => {  try {
+    const { name, email, phoneNumber, printCosts, discountRules, shopHours, address } = req.body;
 
     // Create a new shopkeeper document
     const newShopkeeper = new Shopkeeper({
       name,
+      email,
+      phoneNumber,
       printCosts,
       discountRules,
       shopHours,

@@ -1,0 +1,25 @@
+{
+  "appId": "com.gemini.property.dashboard",
+  "productName": "Gemini Property Dashboard",
+  "directories": {
+    "output": "dist-app"
+  },  
+  "files": [
+    "dist/**/*",
+    "electron/*.cjs",
+    "dist-electron/**/*"
+  ],
+  "win": {
+    "target": ["portable", "nsis"],
+    "icon": "public/icon.ico"
+  },
+  "mac": {
+    "target": ["dmg"],
+    "icon": "public/icon.ico",
+    "category": "public.app-category.business"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "icon": "public/icon.ico"
+  }
+}

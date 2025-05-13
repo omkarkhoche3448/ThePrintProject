@@ -69,8 +69,7 @@ const initWebSocketServer = (server) => {
       }
     });
   });
-  
-  // Subscribe to print job events
+    // Subscribe to print job events
   printJobEvents.on('newPrintJob', (data) => {
     // Send updates to relevant shopkeeper clients
     const shopkeeperId = data.shopkeeperId;
@@ -105,6 +104,26 @@ const initWebSocketServer = (server) => {
         }
       });
     }
+  });
+  
+  // Status-specific event handlers for easier client-side filtering
+  ['printJob_pending', 'printJob_processing', 'printJob_completed', 'printJob_cancelled', 'printJob_failed'].forEach(statusEvent => {
+    printJobEvents.on(statusEvent, (data) => {
+      const shopkeeperId = data.shopkeeperId;
+      
+      if (shopkeeperId && clients.has(shopkeeperId)) {
+        const shopkeeperClients = clients.get(shopkeeperId);
+        
+        shopkeeperClients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: statusEvent,
+              data: data.job
+            }));
+          }
+        });
+      }
+    });
   });
   
   // Ping clients every 30 seconds to keep connections alive

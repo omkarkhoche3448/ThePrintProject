@@ -10,7 +10,14 @@ class ShopkeeperDashboard {
     this.apiBaseUrl = apiBaseUrl;
     this.shopkeeperId = shopkeeperId;
     this.socket = null;
-    this.jobs = [];
+    this.jobs = {
+      all: [],
+      pending: [],
+      processing: [],
+      completed: [],
+      cancelled: [],
+      failed: []
+    };
     this.currentPage = 1;
     this.totalPages = 1;
     this.status = 'all'; // 'all', 'pending', 'completed', etc.
@@ -19,6 +26,13 @@ class ShopkeeperDashboard {
     this.onNewJob = null;
     this.onJobUpdate = null;
     this.onConnectionStatus = null;
+    
+    // Status-specific event handlers
+    this.onJobPending = null;
+    this.onJobProcessing = null;
+    this.onJobCompleted = null;
+    this.onJobCancelled = null;
+    this.onJobFailed = null;
   }
   
   // Initialize WebSocket connection and fetch initial data
@@ -65,7 +79,16 @@ class ShopkeeperDashboard {
           case 'newPrintJob':
             // A new print job has been created
             console.log('New print job received:', message.data);
-            this.jobs.unshift(message.data); // Add to beginning of array
+            
+            // Add to main jobs array
+            this.jobs.all.unshift(message.data);
+            
+            // Add to status-specific array (usually pending)
+            const jobStatus = message.data.status || 'pending';
+            if (this.jobs[jobStatus]) {
+              this.jobs[jobStatus].unshift(message.data);
+            }
+            
             if (this.onNewJob) {
               this.onNewJob(message.data);
             }
@@ -75,15 +98,32 @@ class ShopkeeperDashboard {
             // An existing print job has been updated
             console.log('Print job updated:', message.data);
             
-            // Find and update the job in our local array
-            const updatedIndex = this.jobs.findIndex(job => job.jobId === message.data.jobId);
-            if (updatedIndex !== -1) {
-              this.jobs[updatedIndex] = {
-                ...this.jobs[updatedIndex],
-                ...message.data
-              };
+            this._updateJobInArrays(message.data);
+            
+            if (this.onJobUpdate) {
+              this.onJobUpdate(message.data);
+            }
+            break;
+            
+          // Handle status-specific events
+          case 'printJob_pending':
+          case 'printJob_processing':
+          case 'printJob_completed':
+          case 'printJob_cancelled':
+          case 'printJob_failed':
+            const statusFromEvent = message.type.split('_')[1]; // Extract status from event name
+            console.log(`Print job status ${statusFromEvent} update:`, message.data);
+            
+            // Update job in arrays
+            this._updateJobInArrays(message.data);
+            
+            // Call status-specific handlers if they exist
+            const handlerName = `onJob${statusFromEvent.charAt(0).toUpperCase() + statusFromEvent.slice(1)}`;
+            if (this[handlerName]) {
+              this[handlerName](message.data);
             }
             
+            // Also call the general update handler
             if (this.onJobUpdate) {
               this.onJobUpdate(message.data);
             }
@@ -130,6 +170,49 @@ class ShopkeeperDashboard {
     });
   }
   
+  // Helper method to update job in all arrays
+  _updateJobInArrays(updatedJob) {
+    // Update in main array
+    const mainIndex = this.jobs.all.findIndex(job => job.jobId === updatedJob.jobId);
+    if (mainIndex !== -1) {
+      // Save previous status for later
+      const previousStatus = this.jobs.all[mainIndex].status;
+      
+      // Update in main array
+      this.jobs.all[mainIndex] = {
+        ...this.jobs.all[mainIndex],
+        ...updatedJob
+      };
+      
+      // If status has changed, move between status arrays
+      if (previousStatus !== updatedJob.status) {
+        // Remove from previous status array
+        if (previousStatus && this.jobs[previousStatus]) {
+          this.jobs[previousStatus] = this.jobs[previousStatus].filter(
+            job => job.jobId !== updatedJob.jobId
+          );
+        }
+        
+        // Add to new status array
+        if (updatedJob.status && this.jobs[updatedJob.status]) {
+          this.jobs[updatedJob.status].unshift(updatedJob);
+        }
+      } else {
+        // Update in current status array
+        const statusArray = this.jobs[updatedJob.status];
+        if (statusArray) {
+          const statusIndex = statusArray.findIndex(job => job.jobId === updatedJob.jobId);
+          if (statusIndex !== -1) {
+            statusArray[statusIndex] = {
+              ...statusArray[statusIndex],
+              ...updatedJob
+            };
+          }
+        }
+      }
+    }
+  }
+  
   // Fetch jobs with pagination and filtering
   async fetchJobs(page = 1, status = null) {
     try {
@@ -151,8 +234,13 @@ class ShopkeeperDashboard {
       const data = await response.json();
       
       if (data.success) {
-        this.jobs = data.jobs;
+        // Update the main jobs array
+        this.jobs.all = data.jobs;
         this.totalPages = data.totalPages;
+        
+        // Organize jobs by status
+        this._organizeJobsByStatus(data.jobs);
+        
         return data;
       } else {
         throw new Error(data.message || 'Failed to fetch jobs');
@@ -161,6 +249,23 @@ class ShopkeeperDashboard {
       console.error('Error fetching jobs:', error);
       throw error;
     }
+  }
+  
+  // Helper method to organize jobs by their status
+  _organizeJobsByStatus(jobs) {
+    // Reset status arrays
+    this.jobs.pending = [];
+    this.jobs.processing = [];
+    this.jobs.completed = [];
+    this.jobs.cancelled = [];
+    this.jobs.failed = [];
+    
+    // Sort jobs into their respective status arrays
+    jobs.forEach(job => {
+      if (this.jobs[job.status]) {
+        this.jobs[job.status].push(job);
+      }
+    });
   }
   
   // Update job status
@@ -177,12 +282,62 @@ class ShopkeeperDashboard {
       const data = await response.json();
       
       if (data.success) {
+        // Update local arrays
+        this._updateJobInArrays(data.job);
         return data.job;
       } else {
         throw new Error(data.message || 'Failed to update job status');
       }
     } catch (error) {
       console.error('Error updating job status:', error);
+      throw error;
+    }
+  }
+  
+  // Execute job (start processing)
+  async executeJob(jobId) {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/job-process/${jobId}/execute`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update local arrays
+        this._updateJobInArrays(data.job);
+        return data.job;
+      } else {
+        throw new Error(data.message || 'Failed to execute job');
+      }
+    } catch (error) {
+      console.error('Error executing job:', error);
+      throw error;
+    }
+  }
+  
+  // Fetch jobs by specific status
+  async fetchJobsByStatus(status) {
+    try {
+      if (!['pending', 'processing', 'completed', 'cancelled', 'failed'].includes(status)) {
+        throw new Error('Invalid status');
+      }
+      
+      const response = await fetch(`${this.apiBaseUrl}/job-process/${this.shopkeeperId}/by-status/${status}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the status-specific array
+        this.jobs[status] = data.jobs;
+        return data.jobs;
+      } else {
+        throw new Error(data.message || 'Failed to fetch jobs');
+      }
+    } catch (error) {
+      console.error(`Error fetching ${status} jobs:`, error);
       throw error;
     }
   }
@@ -228,6 +383,12 @@ dashboard.onJobUpdate = (job) => {
   // Update UI to reflect job changes
 };
 
+// Set status-specific handlers
+dashboard.onJobProcessing = (job) => {
+  console.log('Job now processing:', job);
+  // Move job from pending to processing in UI
+};
+
 dashboard.onConnectionStatus = (status) => {
   console.log('Connection status:', status);
   // Update UI to show connection status
@@ -236,6 +397,20 @@ dashboard.onConnectionStatus = (status) => {
 // Initialize dashboard
 dashboard.initialize().then(() => {
   console.log('Dashboard initialized with jobs:', dashboard.jobs);
+  
+  // Get pending jobs
+  console.log('Pending jobs:', dashboard.jobs.pending);
+  
+  // Get processing jobs
+  console.log('Processing jobs:', dashboard.jobs.processing);
+  
+  // Execute a job
+  if (dashboard.jobs.pending.length > 0) {
+    dashboard.executeJob(dashboard.jobs.pending[0].jobId)
+      .then(updatedJob => {
+        console.log('Job now executing:', updatedJob);
+      });
+  }
 }).catch(error => {
   console.error('Failed to initialize dashboard:', error);
 });
