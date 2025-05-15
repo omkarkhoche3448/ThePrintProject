@@ -21,6 +21,14 @@ import { toast } from "@/hooks/use-toast";
 import websocketService from '@/services/websocketService';
 import printJobService, { PrintJob as PrintJobType } from '@/services/printJobService';
 
+interface PrinterInfo {
+  id: string;
+  name: string;
+  status: string;
+  description?: string;
+  connection?: string;
+}
+
 const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
@@ -37,14 +45,9 @@ const Dashboard = () => {
   const [printJobs, setPrintJobs] = useState<PrintJobType[]>([]);
   const [webSocketConnected, setWebSocketConnected] = useState(false);
 
-  // Sample printer data (keep this for now)
-  const printers = [
-    { id: 'PR001', name: 'Office Printer' },
-    { id: 'PR002', name: 'Reception Printer' },
-    { id: 'PR003', name: 'Marketing Printer' },
-    { id: 'PR004', name: 'Executive Printer' },
-    { id: 'PR005', name: 'HR Printer' },
-  ];
+  const [printers, setPrinters] = useState<PrinterInfo[]>([]);
+  const [printerError, setPrinterError] = useState<string | null>(null);
+  const [loadingPrinters, setLoadingPrinters] = useState(true);
 
   // Handle WebSocket connection status
   const handleConnectionStatus = (status: 'connected' | 'disconnected' | 'error') => {
@@ -122,6 +125,84 @@ const Dashboard = () => {
     // Cleanup on unmount
     return () => {
       websocketService.disconnect();
+    };
+  }, []);
+
+  const fetchSystemPrinters = async () => {
+    setLoadingPrinters(true);
+    setPrinterError(null);
+    
+    try {
+      // Check if we're in an Electron environment
+      if (window.electronAPI) {
+        const response = await window.electronAPI.getPrinters();
+        
+        if (response.success && response.printers) {
+          // Transform the printer data to match our interface
+          const formattedPrinters = response.printers.map(p => ({
+            id: p.printer,
+            name: p.description || p.printer,
+            status: p.status,
+            description: p.description,
+            connection: p.connection
+          }));
+          
+          setPrinters(formattedPrinters);
+          
+          // Count online printers (those with status 'idle' or 'processing')
+          const onlinePrinters = formattedPrinters.filter(
+            p => p.status === 'idle' || p.status === 'processing'
+          ).length;
+          
+          setOnlinePrinterCount(onlinePrinters);
+        } else {
+          setPrinterError(response.error || 'Unknown error fetching printers');
+          // Fallback to sample data if in development
+          if (process.env.NODE_ENV === 'development') {
+            useSamplePrinters();
+          }
+        }
+      } else {
+        // Not in Electron, use sample data
+        useSamplePrinters();
+      }
+    } catch (error) {
+      console.error('Error fetching printers:', error);
+      setPrinterError('Failed to fetch printer information');
+      // Fallback to sample data if in development
+      if (process.env.NODE_ENV === 'development') {
+        useSamplePrinters();
+      }
+    } finally {
+      setLoadingPrinters(false);
+    }
+  };
+
+  const useSamplePrinters = () => {
+    const samplePrinters = [
+      { id: 'PR001', name: 'Office Printer', status: 'idle', description: 'Office Printer', connection: 'network' },
+      { id: 'PR002', name: 'Reception Printer', status: 'idle', description: 'Reception Printer', connection: 'network' },
+      { id: 'PR003', name: 'Marketing Printer', status: 'idle', description: 'Marketing Printer', connection: 'network' },
+      { id: 'PR004', name: 'Executive Printer', status: 'idle', description: 'Executive Printer', connection: 'network' },
+      { id: 'PR005', name: 'HR Printer', status: 'idle', description: 'HR Printer', connection: 'network' },
+    ];
+    setPrinters(samplePrinters);
+    setOnlinePrinterCount(samplePrinters.length);
+  };
+
+  useEffect(() => {
+    // Your existing WebSocket initialization code
+
+    // Add these lines to fetch printers
+    fetchSystemPrinters();
+    
+    // Set up a printer refresh interval (every 30 seconds)
+    const printerRefreshInterval = setInterval(fetchSystemPrinters, 30000);
+    
+    // Update your return function to include this:
+    return () => {
+      // Your existing cleanup code
+      clearInterval(printerRefreshInterval);
     };
   }, []);
 
@@ -303,29 +384,59 @@ const Dashboard = () => {
 
           {/* Printer Section - Scrollable Column */}
           <div className="flex flex-col h-full">
-            <h3 className="text-md font-semibold mb-4">Printer Section</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-md font-semibold">Printer Section</h3>
+              <button 
+                onClick={fetchSystemPrinters}
+                className="text-xs text-primary hover:text-primary/80 flex items-center"
+              >
+                <span className="mr-1">Refresh</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6"></path>
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                  <path d="M3 22v-6h6"></path>
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                </svg>
+              </button>
+            </div>
+            
             <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              {/* Printer List */}
-              <div className="space-y-2 mb-6">
-                {printers.map((printer) => (
-                  <PrinterCard 
-                    key={printer.id} 
-                    name={printer.name} 
-                    id={printer.id}
-                    onStatusChange={handlePrinterStatusChange}
-                  />
-                ))}
-              </div>
-
-              {/* Printer stats */}
-              <div className="mt-6">
-                <StatsCard 
-                  title="Online Printers" 
-                  value={`${onlinePrinterCount}/${printers.length}`} 
-                  percentChange={onlinePrinterCount === printers.length ? 100 : Math.round((onlinePrinterCount / printers.length) * 100)} 
-                  icon={<DollarSign className="w-5 h-5 text-primary" />} 
-                />
-              </div>
+              {/* Printer List with Loading State */}
+              {loadingPrinters ? (
+                <div className="flex justify-center items-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                  <span className="ml-2 text-sm text-gray-500">Loading printers...</span>
+                </div>
+              ) : printerError ? (
+                <div className="text-center py-6 text-red-500">
+                  <p className="mb-2">{printerError}</p>
+                  <button 
+                    onClick={fetchSystemPrinters}
+                    className="text-xs text-primary hover:text-primary/80 underline"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : printers.length > 0 ? (
+                <div className="space-y-2 mb-6">
+                  {printers.map((printer) => (
+                    <PrinterCard 
+                      key={printer.id} 
+                      name={printer.name} 
+                      id={printer.id}
+                      // If printer status is 'idle' or 'processing', consider it online
+                      initialStatus={printer.status === 'idle' || printer.status === 'processing'}
+                      description={printer.description}
+                      connection={printer.connection}
+                      onStatusChange={handlePrinterStatusChange}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-400">
+                  No printers found
+                </div>
+              )}
             </div>
           </div>
         </div>

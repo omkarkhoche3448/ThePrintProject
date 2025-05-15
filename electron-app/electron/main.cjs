@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const WebSocket = require("ws");
+const { getPrinters } = require('unix-print');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -31,7 +32,7 @@ const createWindow = () => {
     mainWindow.loadURL("http://localhost:8080");
     // Only open dev tools if explicitly needed for debugging
     // Comment this line out to prevent extra window
-    // mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
   } else {
     // In production mode, load the built app
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
@@ -136,6 +137,18 @@ ipcMain.on('print-job-request', (event, data) => {
     websocket.send(JSON.stringify(data));
   } else {
     console.error('WebSocket not connected');
+  }
+});
+
+// Set up IPC handlers for printer-related operations
+ipcMain.handle('get-system-printers', async () => {
+  try {
+    const printers = await getPrinters();
+    // console.log('Found printers:', printers);
+    return { success: true, printers };
+  } catch (error) {
+    console.error('Error fetching printers:', error);
+    return { success: false, error: error.message };
   }
 });
 

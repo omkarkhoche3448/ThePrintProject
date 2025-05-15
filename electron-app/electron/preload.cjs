@@ -25,5 +25,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     if (validChannels.includes(channel)) {
       return await ipcRenderer.invoke(channel, data);
     }
-  }
+  },
+  // Add this printer-related function
+  getPrinters: () => ipcRenderer.invoke('get-system-printers')
 });
