@@ -3,19 +3,22 @@ export interface ElectronAPI {
   send: (channel: string, data: any) => void;
   receive: (channel: string, func: Function) => void;
   invoke: <T>(channel: string, data?: any) => Promise<T>;
+  /**
+   * Get system printers
+   * @returns Promise with printer information
+   */
   getPrinters: () => Promise<{
     success: boolean;
-    printers?: PrinterInfo[];
+    printers?: Array<{
+      printer: string;   // Changed from 'name' to 'printer'
+      status: string;
+      description?: string;
+      alerts?: string;
+      connection?: string;
+      isDefault?: boolean;
+    }>;
     error?: string;
   }>;
-}
-
-interface PrinterInfo {
-  printer: string;
-  status: string;
-  description: string;
-  alerts: string;
-  connection: string;
 }
 
 declare global {
@@ -23,3 +26,5 @@ declare global {
     electronAPI: ElectronAPI;
   }
 }
+
+export {};

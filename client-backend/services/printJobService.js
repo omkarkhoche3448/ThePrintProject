@@ -73,13 +73,75 @@ const getPreviousJobStatus = async (jobId, currentStatus) => {
 };
 
 /**
+ * Calculate total pages from a page range string
+ * @param {string} pageRanges Page ranges like "1-7" or "2-5, 8, 9-14"
+ * @returns {number} Total number of pages
+ */
+const calculateTotalPages = (pageRanges) => {
+  if (!pageRanges || pageRanges.trim() === '') {
+    return 0;
+  }
+  
+  let totalPages = 0;
+  // Split by comma
+  const ranges = pageRanges.split(',').map(r => r.trim());
+  
+  for (const range of ranges) {
+    if (range.includes('-')) {
+      // Handle range like "1-7"
+      const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+      if (!isNaN(start) && !isNaN(end) && end >= start) {
+        totalPages += (end - start + 1);
+      }
+    } else {
+      // Handle single page like "8"
+      const page = parseInt(range.trim());
+      if (!isNaN(page)) {
+        totalPages++;
+      }
+    }
+  }
+  
+  return totalPages || 1; // Default to 1 if calculation fails
+};
+
+/**
+ * Calculate job priority based on copies and page count
+ * @param {Object} printConfig Print configuration with copies and page_ranges
+ * @returns {number} Priority value (0-100)
+ */
+const calculatePriority = (printConfig) => {
+  const copies = printConfig.copies || 1;
+  const pageCount = calculateTotalPages(printConfig.page_ranges);
+  
+  // Calculate total sheets to print
+  const totalPages = pageCount * copies;
+  
+  // Assign priority based on total pages (inverse relationship)
+  if (totalPages <= 5) {
+    // Small jobs (1-5 pages): high priority (80-100)
+    return Math.max(100 - (totalPages * 4), 80);
+  } else if (totalPages <= 20) {
+    // Medium jobs (6-20 pages): medium priority (40-79)
+    return Math.max(85 - (totalPages * 2.5), 40);
+  } else if (totalPages <= 50) {
+    // Large jobs (21-50 pages): lower priority (20-39)
+    return Math.max(45 - (totalPages / 2), 20);
+  } else {
+    // Very large jobs (>50 pages): lowest priority (0-19)
+    return Math.max(25 - (totalPages / 10), 0);
+  }
+};
+
+/**
  * Start processing a print job (transition from pending to processing)
  * 
  * @param {String} jobId - The ID of the job (can be jobId or orderId)
+ * @param {Object} updates - Optional updates to apply to the job
  * @returns {Promise<Object>} - The updated print job object
  * @throws {Error} - If job is not found or not in pending state
  */
-const startProcessingJob = async (jobId) => {
+const startProcessingJob = async (jobId, updates = {}) => {
   try {
     // Validate input
     if (!jobId) {
@@ -105,6 +167,41 @@ const startProcessingJob = async (jobId) => {
     // Update the job status to processing and add timestamp
     job.status = 'processing';
     job.timeline.processing = new Date();
+    
+    // Update printer assignments and priorities if provided
+    if (updates.files && Array.isArray(updates.files)) {
+      // Map of file updates by _id
+      const fileUpdates = new Map();
+      updates.files.forEach(fileUpdate => {
+        if (fileUpdate._id) {
+          fileUpdates.set(fileUpdate._id.toString(), fileUpdate);
+        }
+      });
+      
+      // Apply updates to each file
+      job.files.forEach(file => {
+        const fileId = file._id.toString();
+        const update = fileUpdates.get(fileId);
+        
+        if (update && update.printConfig) {
+          // Update printer if provided
+          if (update.printConfig.printer) {
+            file.printConfig.printer = update.printConfig.printer;
+          }
+          
+          // Update priority if provided
+          if (update.printConfig.priority !== undefined) {
+            file.printConfig.priority = update.printConfig.priority;
+          } else {
+            // Calculate priority if not provided
+            file.printConfig.priority = calculatePriority(file.printConfig);
+          }
+        } else {
+          // Calculate priority if no updates provided
+          file.printConfig.priority = calculatePriority(file.printConfig);
+        }
+      });
+    }
     
     // Save the updated job
     await job.save();
@@ -218,7 +315,9 @@ const setupPrintJobChangeStream = async () => {
 
 module.exports = {
   getLivePrintJobs,
-  setupPrintJobChangeStream,
   getPreviousJobStatus,
-  startProcessingJob
+  startProcessingJob,
+  setupPrintJobChangeStream,
+  calculateTotalPages,  // Export utility functions
+  calculatePriority
 };

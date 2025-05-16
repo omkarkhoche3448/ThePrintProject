@@ -50,9 +50,10 @@ router.put('/:jobId/execute', async (req, res) => {
 router.post('/:jobId/start-processing', async (req, res) => {
   try {
     const { jobId } = req.params;
+    const updates = req.body || {}; // Get any updates from request body
     
-    // Use the service to process the job
-    const job = await printJobService.startProcessingJob(jobId);
+    // Use the service to process the job with updates
+    const job = await printJobService.startProcessingJob(jobId, updates);
     
     return res.status(200).json({
       success: true,
@@ -135,6 +136,49 @@ router.get('/:shopkeeperId/by-status/:status', async (req, res) => {
     
   } catch (error) {
     console.error('Error fetching jobs by status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get job details for printer assignment
+ * @route GET /job-process/:jobId/details
+ * @param {string} jobId - Print job ID
+ * @returns {Object} Job details
+ */
+router.get('/:jobId/details', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    // Get the PrintJob model
+    const PrintJob = mongoose.model('PrintJob');
+    
+    // Find job by jobId or orderId
+    const job = await PrintJob.findOne({
+      $or: [
+        { jobId: jobId }, 
+        { orderId: jobId }
+      ]
+    });
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Print job not found'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      job
+    });
+    
+  } catch (error) {
+    console.error('Error fetching job details:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error',
