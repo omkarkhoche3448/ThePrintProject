@@ -2,13 +2,13 @@ var _a;
 import { app, BrowserWindow } from "electron";
 import * as path$1 from "path";
 import path__default from "path";
-import require$$0$3, { fileURLToPath } from "url";
 import * as fs$2 from "fs";
 import fs__default from "fs";
 import require$$0$2 from "util";
 import stream, { Readable } from "stream";
 import require$$3$1 from "http";
 import require$$4$1 from "https";
+import require$$0$3 from "url";
 import require$$0$4 from "crypto";
 import require$$4$2 from "assert";
 import require$$1$1 from "tty";
@@ -102152,6 +102152,7 @@ function requireLib() {
   return lib$2;
 }
 var libExports = requireLib();
+temo / ThePrintProject / electron - app / electron / printJobProcessor.ts;
 const PRINT_SERVER_URL = "http://localhost:3001/api/print";
 const DB_URI = "mongodb+srv://admin:admin@customerservicechat.4uk1s.mongodb.net/?retryWrites=true&w=majority&appName=CustomerServiceChat";
 const DB_NAME = "test";
@@ -102162,6 +102163,7 @@ const POLL_INTERVAL = 5e3;
 let processingJobs = /* @__PURE__ */ new Set();
 let isConnectedToDb = false;
 let isConnectedToPrintServer = false;
+let intervalId = null;
 function isValidObjectId(id) {
   try {
     new libExports.ObjectId(id);
@@ -102176,10 +102178,22 @@ function initPrintJobProcessor() {
   if (!fs$2.existsSync(tempDir)) {
     fs$2.mkdirSync(tempDir, { recursive: true });
   }
-  checkDbConnection();
-  checkPrintServerConnection();
-  setInterval(pollForNewJobs, POLL_INTERVAL);
-  console.log("[PrintProcessor] Print job processor initialized, polling every", POLL_INTERVAL / 1e3, "seconds");
+  Promise.all([checkDbConnection(), checkPrintServerConnection()]).then(() => {
+    console.log("[PrintProcessor] Initial connection checks completed");
+    pollForNewJobs();
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    intervalId = setInterval(pollForNewJobs, POLL_INTERVAL);
+    console.log(`[PrintProcessor] Print job processor initialized, polling every ${POLL_INTERVAL / 1e3} seconds`);
+  }).catch((error2) => {
+    console.error("[PrintProcessor] Error during initialization:", error2);
+    console.log("[PrintProcessor] Will retry connections during polling interval");
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    intervalId = setInterval(pollForNewJobs, POLL_INTERVAL);
+  });
 }
 async function checkDbConnection() {
   try {
@@ -102200,9 +102214,11 @@ async function checkDbConnection() {
       console.log("[PrintProcessor] ✅ Successfully connected to MongoDB with required collections");
     }
     await client.close();
+    return isConnectedToDb;
   } catch (error2) {
     isConnectedToDb = false;
     console.error("[PrintProcessor] ❌ Failed to connect to MongoDB:", error2);
+    return false;
   }
 }
 async function checkPrintServerConnection() {
@@ -102211,20 +102227,32 @@ async function checkPrintServerConnection() {
     const response = await axios.get("http://localhost:3001/");
     isConnectedToPrintServer = true;
     console.log("[PrintProcessor] ✅ Print server is running:", response.data);
+    return true;
   } catch (error2) {
     isConnectedToPrintServer = false;
     console.error("[PrintProcessor] ❌ Print server is not running or not accessible:", error2.message);
     console.log("[PrintProcessor] 💡 Make sure to start the print server: cd server-xerox-backend && node server.js");
+    return false;
   }
 }
 async function pollForNewJobs() {
   if (!isConnectedToDb) {
-    console.log("[PrintProcessor] Skipping poll - not connected to database");
-    return checkDbConnection();
+    try {
+      await checkDbConnection();
+    } catch (error2) {
+      console.log("[PrintProcessor] Database connection still unavailable");
+    }
   }
   if (!isConnectedToPrintServer) {
-    console.log("[PrintProcessor] Skipping poll - not connected to print server");
-    return checkPrintServerConnection();
+    try {
+      await checkPrintServerConnection();
+    } catch (error2) {
+      console.log("[PrintProcessor] Print server still unavailable");
+    }
+  }
+  if (!isConnectedToDb || !isConnectedToPrintServer) {
+    console.log("[PrintProcessor] Skipping job poll - connection issues");
+    return;
   }
   try {
     const client = await libExports.MongoClient.connect(DB_URI);
@@ -102238,13 +102266,18 @@ async function pollForNewJobs() {
     const jobs = await cursor.toArray();
     if (jobs.length > 0) {
       console.log(`[PrintProcessor] Found ${jobs.length} new processing jobs`);
-    }
-    for (const job of jobs) {
-      processingJobs.add(job.jobId);
-      processJob(job, db2).catch((err) => {
-        console.error(`[PrintProcessor] Error processing job ${job.jobId}:`, err);
-        processingJobs.delete(job.jobId);
-      });
+      for (const job of jobs) {
+        processingJobs.add(job.jobId);
+        processJob(job, db2).then(() => {
+          console.log(`[PrintProcessor] Job ${job.jobId} processing completed`);
+        }).catch((err) => {
+          console.error(`[PrintProcessor] Error processing job ${job.jobId}:`, err);
+        }).finally(() => {
+          processingJobs.delete(job.jobId);
+        });
+      }
+    } else {
+      console.log("[PrintProcessor] No new jobs to process");
     }
     await client.close();
   } catch (error2) {
@@ -102281,8 +102314,6 @@ async function processJob(job, db2) {
         }
       }
     );
-  } finally {
-    processingJobs.delete(job.jobId);
   }
 }
 async function processFile(fileInfo, job, db2) {
@@ -102406,60 +102437,34 @@ const createWindow = () => {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path__default.join(__dirname, "preload.js"),
+      preload: path$1.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true
     }
   });
-  try {
-    mainWindow.webContents.openDevTools();
-    console.log("Opened DevTools immediately");
-  } catch (e) {
-    console.error("Failed to open DevTools immediately:", e);
-  }
   if (isDevelopment) {
     mainWindow.loadURL("http://localhost:8080").catch((e) => {
       console.error("Failed to load dev URL:", e);
-    }).finally(() => {
-      mainWindow == null ? void 0 : mainWindow.webContents.openDevTools();
     });
-  } else {
-    const __dirname2 = path__default.dirname(fileURLToPath(import.meta.url));
-    mainWindow.loadFile(path__default.join(__dirname2, "../dist/index.html"));
     mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path$1.join(__dirname, "../dist/index.html"));
   }
   mainWindow.webContents.on("did-finish-load", () => {
-    console.log("Window finished loading, opening DevTools");
-    mainWindow == null ? void 0 : mainWindow.webContents.openDevTools();
+    console.log("Window did-finish-load");
   });
   mainWindow.webContents.on("dom-ready", () => {
-    console.log("DOM ready, opening DevTools");
-    mainWindow == null ? void 0 : mainWindow.webContents.openDevTools();
-  });
-  mainWindow.once("ready-to-show", () => {
-    console.log("Window ready to show, opening DevTools");
-    mainWindow == null ? void 0 : mainWindow.webContents.openDevTools();
-  });
-  [500, 1e3, 2e3, 3e3, 5e3].forEach((delay) => {
-    setTimeout(() => {
-      try {
-        if (mainWindow && !mainWindow.webContents.isDevToolsOpened()) {
-          console.log(`Trying to open DevTools after ${delay}ms`);
-          mainWindow.webContents.openDevTools();
-        }
-      } catch (error2) {
-        console.error(`Failed to open DevTools after ${delay}ms:`, error2);
-      }
-    }, delay);
+    console.log("Window dom-ready");
   });
 };
 app.whenReady().then(() => {
+  console.log("Electron app is ready");
   createWindow();
+  console.log("Initializing print job processor...");
   initPrintJobProcessor();
+  console.log("Print job processor initialized");
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 app.on("window-all-closed", () => {

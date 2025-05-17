@@ -1,3 +1,4 @@
+temo/ThePrintProject/electron-app/electron/printJobProcessor.ts
 import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -17,6 +18,7 @@ const POLL_INTERVAL = 5000; // 5 seconds
 let processingJobs = new Set<string>(); // Track jobs we're currently processing
 let isConnectedToDb = false;
 let isConnectedToPrintServer = false;
+let intervalId: NodeJS.Timeout | null = null;
 
 /**
  * Check if string is a valid MongoDB ObjectId
@@ -42,21 +44,37 @@ export function initPrintJobProcessor() {
     fs.mkdirSync(tempDir, { recursive: true });
   }
   
-  // Check database connection
-  checkDbConnection();
-  
-  // Check print server connection
-  checkPrintServerConnection();
-  
-  // Start polling for new jobs
-  setInterval(pollForNewJobs, POLL_INTERVAL);
-  console.log('[PrintProcessor] Print job processor initialized, polling every', POLL_INTERVAL/1000, 'seconds');
+  // Check connections
+  Promise.all([checkDbConnection(), checkPrintServerConnection()])
+    .then(() => {
+      console.log('[PrintProcessor] Initial connection checks completed');
+      
+      // Run one immediate poll to catch existing jobs
+      pollForNewJobs();
+      
+      // Start polling interval
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      intervalId = setInterval(pollForNewJobs, POLL_INTERVAL);
+      console.log(`[PrintProcessor] Print job processor initialized, polling every ${POLL_INTERVAL/1000} seconds`);
+    })
+    .catch(error => {
+      console.error('[PrintProcessor] Error during initialization:', error);
+      console.log('[PrintProcessor] Will retry connections during polling interval');
+      
+      // Start polling anyway to retry connections
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      intervalId = setInterval(pollForNewJobs, POLL_INTERVAL);
+    });
 }
 
 /**
  * Check database connection
  */
-async function checkDbConnection() {
+async function checkDbConnection(): Promise<boolean> {
   try {
     console.log('[PrintProcessor] Checking MongoDB connection...');
     const client = await MongoClient.connect(DB_URI);
@@ -80,26 +98,30 @@ async function checkDbConnection() {
     }
     
     await client.close();
+    return isConnectedToDb;
   } catch (error) {
     isConnectedToDb = false;
     console.error('[PrintProcessor] ❌ Failed to connect to MongoDB:', error);
+    return false;
   }
 }
 
 /**
  * Check print server connection
  */
-async function checkPrintServerConnection() {
+async function checkPrintServerConnection(): Promise<boolean> {
   try {
     console.log('[PrintProcessor] Checking print server connection...');
     // Just check the root URL
     const response = await axios.get('http://localhost:3001/');
     isConnectedToPrintServer = true;
     console.log('[PrintProcessor] ✅ Print server is running:', response.data);
+    return true;
   } catch (error) {
     isConnectedToPrintServer = false;
     console.error('[PrintProcessor] ❌ Print server is not running or not accessible:', error.message);
     console.log('[PrintProcessor] 💡 Make sure to start the print server: cd server-xerox-backend && node server.js');
+    return false;
   }
 }
 
@@ -107,14 +129,27 @@ async function checkPrintServerConnection() {
  * Poll the database for new jobs in "processing" status
  */
 async function pollForNewJobs() {
+  // Check connections if needed
   if (!isConnectedToDb) {
-    console.log('[PrintProcessor] Skipping poll - not connected to database');
-    return checkDbConnection();
+    try {
+      await checkDbConnection();
+    } catch (error) {
+      console.log('[PrintProcessor] Database connection still unavailable');
+    }
   }
   
   if (!isConnectedToPrintServer) {
-    console.log('[PrintProcessor] Skipping poll - not connected to print server');
-    return checkPrintServerConnection();
+    try {
+      await checkPrintServerConnection();
+    } catch (error) {
+      console.log('[PrintProcessor] Print server still unavailable');
+    }
+  }
+  
+  // Skip if still not connected
+  if (!isConnectedToDb || !isConnectedToPrintServer) {
+    console.log('[PrintProcessor] Skipping job poll - connection issues');
+    return;
   }
   
   try {
@@ -133,14 +168,25 @@ async function pollForNewJobs() {
     
     if (jobs.length > 0) {
       console.log(`[PrintProcessor] Found ${jobs.length} new processing jobs`);
-    }
-    
-    for (const job of jobs) {
-      processingJobs.add(job.jobId);
-      processJob(job, db).catch(err => {
-        console.error(`[PrintProcessor] Error processing job ${job.jobId}:`, err);
-        processingJobs.delete(job.jobId);
-      });
+      
+      // Process each job
+      for (const job of jobs) {
+        processingJobs.add(job.jobId);
+        
+        // Process job in background
+        processJob(job, db)
+          .then(() => {
+            console.log(`[PrintProcessor] Job ${job.jobId} processing completed`);
+          })
+          .catch(err => {
+            console.error(`[PrintProcessor] Error processing job ${job.jobId}:`, err);
+          })
+          .finally(() => {
+            processingJobs.delete(job.jobId);
+          });
+      }
+    } else {
+      console.log('[PrintProcessor] No new jobs to process');
     }
     
     await client.close();
@@ -189,8 +235,6 @@ async function processJob(job: any, db: any) {
         }
       }
     );
-  } finally {
-    processingJobs.delete(job.jobId);
   }
 }
 
