@@ -168,12 +168,12 @@ router.post('/create', async (req, res) => {
         };
 
         // Log the final object before saving to database
-        console.log('Print job being saved to database:', JSON.stringify(printJob, null, 2));
+        // console.log('Print job being saved to database:', JSON.stringify(printJob, null, 2));
 
         const createdJob = await PrintJob.create(printJob);
 
         // You can also log the saved object to see what MongoDB returns
-        console.log('Saved print job:', JSON.stringify(createdJob, null, 2));
+        // console.log('Saved print job:', JSON.stringify(createdJob, null, 2));
         
         return res.status(201).json({
           success: true,

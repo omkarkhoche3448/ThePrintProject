@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
+import { initPrintJobProcessor } from './printJobProcessor';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 // Use different approach for ES modules
@@ -84,6 +85,9 @@ const createWindow = (): void => {
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
   createWindow();
+
+  // Initialize print job processor
+  initPrintJobProcessor();
 
   app.on("activate", () => {
     // On macOS it's common to re-create a window in the app when the

@@ -266,13 +266,13 @@ const setupPrintJobChangeStream = async () => {
       switch (change.operationType) {
         case 'insert':
           // New job created
-          console.log(`New print job created: ${job.jobId}`);
+          // console.log(`New print job created: ${job.jobId}`);
           wsEvents.broadcastNewPrintJob(job);
           break;
           
         case 'update':
           // Job updated
-          console.log(`Print job updated: ${job.jobId}`);
+          // console.log(`Print job updated: ${job.jobId}`);
             // Determine if status changed
           let previousStatus = null;
           if (change.updateDescription && change.updateDescription.updatedFields) {

@@ -96,7 +96,7 @@ class ShopkeeperDashboard {
             
           case 'updatedPrintJob':
             // An existing print job has been updated
-            console.log('Print job updated:', message.data);
+            // console.log('Print job updated:', message.data);
             
             this._updateJobInArrays(message.data);
             
