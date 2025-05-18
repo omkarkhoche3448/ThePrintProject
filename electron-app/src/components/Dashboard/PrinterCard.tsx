@@ -4,11 +4,12 @@ import { Printer } from 'lucide-react';
 interface PrinterCardProps {
   name: string;
   id: string;
+  initialOnline?: boolean;
   onStatusChange?: (id: string, isOnline: boolean) => void;
 }
 
-const PrinterCard = ({ name, id, onStatusChange }: PrinterCardProps) => {
-  const [isOnline, setIsOnline] = useState(true);
+const PrinterCard = ({ name, id, initialOnline = false, onStatusChange }: PrinterCardProps) => {
+  const [isOnline, setIsOnline] = useState(initialOnline);
 
   const toggleStatus = () => {
     const newStatus = !isOnline;

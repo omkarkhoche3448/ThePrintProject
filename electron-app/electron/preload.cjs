@@ -27,3 +27,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }
   }
 });
+
+// Expose the printer management APIs
+contextBridge.exposeInMainWorld("electron", {
+  // Get all printers
+  getPrinters: async () => {
+    return await ipcRenderer.invoke("get-printers");
+  },
+  // Set printer status (online/offline)
+  setPrinterStatus: async (data) => {
+    return await ipcRenderer.invoke("set-printer-status", data);
+  },
+  // Set automation status (enabled/disabled)
+  setAutomationEnabled: async (data) => {
+    return await ipcRenderer.invoke("set-automation-enabled", data);
+  },
+  // Print a specific job
+  printJob: async (data) => {
+    return await ipcRenderer.invoke("print-job", data);
+  }
+});

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const WebSocket = require("ws");
+const PrintJobController = require("./printJobController.cjs");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -12,6 +13,7 @@ let mainWindow = null;
 let websocket = null;
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 10;
+let printJobController = null;
 
 const createWindow = () => {
   // Create the browser window.
@@ -143,6 +145,10 @@ ipcMain.on('print-job-request', (event, data) => {
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
   createWindow();
+  
+  // Initialize the print job controller
+  printJobController = new PrintJobController();
+  printJobController.init();
 
   app.on("activate", () => {
     // On macOS it's common to re-create a window in the app when the

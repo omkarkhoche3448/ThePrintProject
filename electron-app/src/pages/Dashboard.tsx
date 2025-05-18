@@ -20,14 +20,14 @@ import {
 import { toast } from "@/hooks/use-toast";
 import websocketService from '@/services/websocketService';
 import printJobService, { PrintJob as PrintJobType } from '@/services/printJobService';
+import printerService, { Printer as PrinterType } from '@/services/printerService';
 
-const Dashboard = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [dialogMessage, setDialogMessage] = useState('');
   const [dialogTitle, setDialogTitle] = useState('');
-  const [onlinePrinterCount, setOnlinePrinterCount] = useState(5); // All printers are initially online
+  const [onlinePrinterCount, setOnlinePrinterCount] = useState(0);
   const { user } = useAuth();
   
   // Add loading state for API data
@@ -37,14 +37,8 @@ const Dashboard = () => {
   const [printJobs, setPrintJobs] = useState<PrintJobType[]>([]);
   const [webSocketConnected, setWebSocketConnected] = useState(false);
 
-  // Sample printer data (keep this for now)
-  const printers = [
-    { id: 'PR001', name: 'Office Printer' },
-    { id: 'PR002', name: 'Reception Printer' },
-    { id: 'PR003', name: 'Marketing Printer' },
-    { id: 'PR004', name: 'Executive Printer' },
-    { id: 'PR005', name: 'HR Printer' },
-  ];
+  // State for printers
+  const [printers, setPrinters] = useState<PrinterType[]>([]);
 
   // Handle WebSocket connection status
   const handleConnectionStatus = (status: 'connected' | 'disconnected' | 'error') => {
@@ -81,7 +75,6 @@ const Dashboard = () => {
       job.jobId === updatedJob.jobId ? updatedJob : job
     ));
   };
-
   // Initialize WebSocket and fetch initial data
   useEffect(() => {
     const initializeWebSocket = async () => {
@@ -103,11 +96,26 @@ const Dashboard = () => {
         if (response.success && response.jobs) {
           setPrintJobs(response.jobs);
         }
+        
+        // Fetch printers
+        const printersResponse = await printerService.getPrinters();
+        if (printersResponse.success && printersResponse.printers) {
+          setPrinters(printersResponse.printers);
+          
+          // Count online printers
+          const onlinePrinters = printersResponse.printers.filter(p => p.online).length;
+          setOnlinePrinterCount(onlinePrinters);
+          
+          // Get automation status
+          if (printersResponse.automationEnabled !== undefined) {
+            setAutomationEnabled(printersResponse.automationEnabled);
+          }
+        }
       } catch (error) {
-        console.error('Error fetching initial jobs:', error);
+        console.error('Error fetching initial data:', error);
         toast({
           title: "Error",
-          description: "Failed to fetch print jobs.",
+          description: "Failed to fetch initial data.",
           variant: "destructive"
         });
       } finally {
@@ -124,38 +132,35 @@ const Dashboard = () => {
       websocketService.disconnect();
     };
   }, []);
-
-  const handleAutomationToggle = () => {
+  const handleAutomationToggle = async () => {
     const newStatus = !automationEnabled;
     setDialogTitle('Automation Status Change');
     setDialogMessage(`${newStatus ? 'Enabling' : 'Disabling'} automatic printing. ${newStatus ? 'Print jobs will now be sent automatically to online printers.' : 'Print jobs will require manual printing.'}`);
     setShowDialog(true);
+    
+    // Update automation status through service
+    await printerService.setAutomationEnabled(newStatus);
+    
+    // Update local state
     setAutomationEnabled(newStatus);
   };
-    const handlePrint = async (orderId: string) => {
+  
+  const handlePrint = async (orderId: string) => {
     try {
       // Find the job by orderId
       const job = printJobs.find(job => job.orderId === orderId);
       if (job) {
-        // Call the service to start processing the job
+        // Start processing job using the printer service
+        await printerService.printJob(job.jobId);
+        
+        // Call the original service to update the job status in backend
         const response = await printJobService.executeJob(job.jobId);
+        
         if (response.success) {
-          // Handle successful job execution
-          toast({
-            title: "Print Job Started",
-            description: `Now printing order #${orderId}`
-          });
-          
           // Update local state to reflect job status change to "processing"
           handleJobUpdate({
             ...job,
             status: 'processing'
-          });
-        } else {
-          toast({
-            title: "Print Failed",
-            description: response.message || "Failed to start print job",
-            variant: "destructive"
           });
         }
       } else {
@@ -176,17 +181,39 @@ const Dashboard = () => {
     }
   };
   
-  const handlePrinterStatusChange = (id: string, isOnline: boolean) => {
-    if (isOnline) {
-      setOnlinePrinterCount(prev => prev + 1);
-      setDialogTitle('Printer Online');
-      setDialogMessage(`Printer ${id} is now online. Automated print jobs will be sent to this printer.`);
-    } else {
-      setOnlinePrinterCount(prev => prev - 1);
-      setDialogTitle('Printer Offline');
-      setDialogMessage(`Printer ${id} is now offline. No automated print jobs will be sent to this printer.`);
+  const handlePrinterStatusChange = async (id: string, isOnline: boolean) => {
+    try {
+      // Update printer status via printer service
+      const result = await printerService.setPrinterStatus(id, isOnline);
+      
+      if (result.success) {
+        // Update local printer state
+        setPrinters(prevPrinters => 
+          prevPrinters.map(printer => 
+            printer.id === id ? { ...printer, online: isOnline } : printer
+          )
+        );
+        
+        // Update online printer count
+        if (isOnline) {
+          setOnlinePrinterCount(prev => prev + 1);
+          setDialogTitle('Printer Online');
+          setDialogMessage(`Printer ${id} is now online. Automated print jobs will be sent to this printer.`);
+        } else {
+          setOnlinePrinterCount(prev => prev - 1);
+          setDialogTitle('Printer Offline');
+          setDialogMessage(`Printer ${id} is now offline. No automated print jobs will be sent to this printer.`);
+        }
+        setShowDialog(true);
+      }
+    } catch (error) {
+      console.error('Error changing printer status:', error);
+      toast({
+        title: 'Printer Status Error',
+        description: 'Failed to update printer status',
+        variant: 'destructive'
+      });
     }
-    setShowDialog(true);
   };
 
   // Filter jobs for UI sections
@@ -299,22 +326,27 @@ const Dashboard = () => {
                 />
               </div>
             </div>
-          </div>
-
-          {/* Printer Section - Scrollable Column */}
+          </div>          {/* Printer Section - Scrollable Column */}
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Printer Section</h3>
             <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {/* Printer List */}
               <div className="space-y-2 mb-6">
-                {printers.map((printer) => (
-                  <PrinterCard 
-                    key={printer.id} 
-                    name={printer.name} 
-                    id={printer.id}
-                    onStatusChange={handlePrinterStatusChange}
-                  />
-                ))}
+                {printers.length > 0 ? (
+                  printers.map((printer) => (
+                    <PrinterCard 
+                      key={printer.id} 
+                      name={printer.name} 
+                      id={printer.id}
+                      onStatusChange={handlePrinterStatusChange}
+                      initialOnline={printer.online}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-400">
+                    No printers found
+                  </div>
+                )}
               </div>
 
               {/* Printer stats */}
@@ -322,7 +354,7 @@ const Dashboard = () => {
                 <StatsCard 
                   title="Online Printers" 
                   value={`${onlinePrinterCount}/${printers.length}`} 
-                  percentChange={onlinePrinterCount === printers.length ? 100 : Math.round((onlinePrinterCount / printers.length) * 100)} 
+                  percentChange={printers.length === 0 ? 0 : Math.round((onlinePrinterCount / printers.length) * 100)} 
                   icon={<DollarSign className="w-5 h-5 text-primary" />} 
                 />
               </div>

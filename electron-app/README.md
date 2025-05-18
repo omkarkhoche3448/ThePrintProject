@@ -1,33 +1,66 @@
-# Welcome to your Lovable project
+# ThePrintProject Electron App
 
-## Project info
+This is the desktop client application for ThePrintProject, which integrates with Windows printer systems.
 
-**URL**: https://lovable.dev/projects/cbde041b-74c4-4bce-a5ea-a39616b3470b
+## Project Structure
 
-## How can I edit this code?
+- `electron/` - Contains main process code for Electron
+  - `main.cjs` - Main Electron process entry point
+  - `preload.cjs` - Preload script for Electron
+  - `printJobController.cjs` - Manages print jobs and distribution
+  - `windowsPrinterManager.cjs` - Handles Windows printer discovery and status
+  - `test-mongo-connection.cjs` - Test script for MongoDB connection handling
+- `src/` - Front-end React application
+  - `components/` - React UI components
+  - `pages/` - Main application pages
+  - `services/` - API and service integration
 
-There are several ways of editing your application.
+## Recent Updates
 
-**Use Lovable**
+### Module System Fix
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cbde041b-74c4-4bce-a5ea-a39616b3470b) and start prompting.
+We've resolved issues with ES modules vs CommonJS compatibility by:
+1. Renaming Electron backend files to use `.cjs` extension
+2. Updating imports to reference the correct file extensions
+3. See `README-MODULES.md` for detailed information
 
-Changes made via Lovable will be committed automatically to this repo.
+### MongoDB Connection Handling
 
-**Use your preferred IDE**
+Fixed the `MongoExpiredSessionError: Cannot use a session that has ended` error by:
+1. Creating dedicated MongoDB connections for each operation
+2. Properly closing connections in finally blocks
+3. Avoiding passing database handles between async functions
+4. See `README-MODULES.md` for complete details
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Development
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+# Install dependencies
+npm install
 
-Follow these steps:
+# Start in development mode
+npm run dev:electron
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Build for production
+npm run build:electron
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Testing
+
+```bash
+# Test MongoDB connection handling
+node electron/test-mongo-connection.cjs
+```
+
+## Troubleshooting
+
+If you encounter issues with the application:
+
+1. Check the application logs in the terminal
+2. Verify printer connections in Windows settings
+3. Run the MongoDB connection test script
+4. Use the cleanup.bat script to remove temporary files
+5. Refer to WINDOWS-PRINTING.md for printer-specific troubleshooting
 
 # Step 3: Install the necessary dependencies.
 npm i
