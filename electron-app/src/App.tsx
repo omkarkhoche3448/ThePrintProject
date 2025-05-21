@@ -11,7 +11,6 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
-import JobDetail from "./pages/JobDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import "./App.css";
@@ -49,7 +48,6 @@ const App = () => {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/job/:jobId" element={<JobDetail />} />
               <Route path="/documents" element={<Navigate to="/dashboard" />} />
               <Route path="/calendar" element={<Navigate to="/dashboard" />} />
               <Route path="/printers" element={<Navigate to="/settings" />} />
