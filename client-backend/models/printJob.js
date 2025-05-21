@@ -8,11 +8,14 @@ const printJobSchema = new Schema({
     required: true,
     unique: true,
     default: () => `JOB-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-  },
-  orderId: {
+  },  orderId: {
     type: String,
     required: true,
-    default: () => `ORDER-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+    default: () => {
+      // Generate a shorter, more user-friendly order ID
+      const randomHex = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      return randomHex;
+    }
   },
   userId: {
     type: String,
@@ -72,30 +75,64 @@ const printJobSchema = new Schema({
         type: String,
         enum: ['none', 'single'],
         default: 'none'
-      },
-      printer: {
+      },      printer: {
         type: String,
         default: 'Virtual_PDF_Printer_1'
       },
       priority: {
         type: Number,
         default: 90
+      },
+      pageCount: {
+        type: Number,
+        default: 0
+      },
+      isPriority: {
+        type: Boolean,
+        default: false
       }
     }
   }],
   jobConfig: {
     // Any common job configuration can go here
-  },
-  status: {
+  },  status: {
     type: String,
     enum: ['pending', 'processing', 'completed', 'cancelled', 'failed'],
     default: 'pending'
   },
   pricing: {
-    baseCost: Number,
-    discount: Number,
-    taxAmount: Number,
-    totalAmount: Number
+    baseCost: {
+      type: Number,
+      default: 0
+    },
+    discount: {
+      type: Number,
+      default: 0
+    },
+    taxAmount: {
+      type: Number,
+      default: 0
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+      default: 0
+    },
+    itemCount: {
+      type: Number,
+      default: 0
+    },
+    totalPages: {
+      type: Number,
+      default: 0
+    },    priorityFee: {
+      type: Number,
+      default: 0
+    },
+    isShopkeeperPriority: {
+      type: Boolean,
+      default: false
+    }
   },
   payment: {
     status: {

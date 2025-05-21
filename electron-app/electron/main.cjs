@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, session } = require("electron");
 const path = require("path");
 const WebSocket = require("ws");
 const PrintJobController = require("./printJobController.cjs");
@@ -17,6 +17,23 @@ const maxReconnectAttempts = 10;
 let printJobController = null;
 
 const createWindow = () => {
+  // Set up CSP
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self';" +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co;" +
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;" +
+          "font-src 'self' https://fonts.gstatic.com;" +
+          "img-src 'self' data: https: http:;" +
+          "connect-src 'self' ws: wss: http: https:;"
+        ]
+      }
+    });
+  });
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1200,

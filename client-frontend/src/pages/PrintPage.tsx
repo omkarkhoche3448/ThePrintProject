@@ -55,6 +55,7 @@ interface Shopkeeper {
     color: number;
   };
   priorityRate: number;
+  isPriorityShopkeeper?: boolean;
   discountRules: Array<{
     discountPercentage: number;
     minimumOrderAmount: number;
@@ -219,8 +220,7 @@ function PrintPage() {
         price: calculatePrice(file.pageCount, globalOptions, file.selectedPages),
       }))
     );
-  }, [globalOptions]);
-  // Checkout Handler
+  }, [globalOptions]);  // Checkout Handler
   const handleCheckout = useCallback(async () => {
     if (!user || !selectedShopkeeper) {
       setError("Please select a shopkeeper and ensure you're logged in");
@@ -232,14 +232,27 @@ function PrintPage() {
       setShowProcessingModal(true); // Show processing modal first
       const formData = new FormData();
   
-      // Add order metadata
+      // Calculate total pages across all files
+      const totalPages = files.reduce((sum, file) => sum + file.pageCount, 0);
+      
+      // Calculate the total price
+      const totalPrice = files.reduce((sum, file) => sum + file.price, 0);
+      
+      // Calculate priority fee
+      const basePriorityRate = selectedShopkeeper?.priorityRate || 1.2; // 20% priority fee default
+      const priorityFee = isPriorityOrder ? (totalPrice * (basePriorityRate - 1)) : 0;      // Add order metadata
       const orderMetadata = {
         userId: user.id,
         username: user.fullName || user.username, // Changed to username to match the backend model
         userEmail: user.emailAddresses[0]?.emailAddress,
         shopkeeperId: selectedShopkeeper._id,
         isPriorityOrder,
-        totalPrice: files.reduce((sum, file) => sum + file.price, 0),
+        totalPrice: totalPrice,
+        priorityFee: priorityFee,
+        totalPages: totalPages,
+        itemCount: files.length,
+        isShopkeeperPriority: isPriorityOrder, // Set to true when priority is selected by the user
+        deliveryMethod: 'pickup', // Default to pickup, add UI option later if needed
         timestamp: new Date().toISOString()
       };
       formData.append('orderMetadata', JSON.stringify(orderMetadata));

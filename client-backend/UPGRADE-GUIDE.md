@@ -33,8 +33,10 @@ We've redesigned the print job structure to keep multiple files under a single j
 ### Frontend Display
 When displaying orders to users, use the `orderId` field which has a user-friendly format:
 ```
-ORDER-1714408621019-5678
+fc35ab
 ```
+
+The orderId is now a 6-character hexadecimal string that's short and readable, displayed as "Order #fc35ab" in the user interface.
 
 ### Finding Jobs
 Jobs can now be found by either their `jobId` or `orderId`:

@@ -24,6 +24,7 @@ import {
   Menu
 } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { formatOrderId, formatPageCount, formatPriorityStatus } from '../utils/formatters';
 
 interface PrintConfig {
   copies: number;
@@ -34,6 +35,7 @@ interface PrintConfig {
   pageRange: string;
   pagesPerSheet: number;
   isPriority?: boolean;
+  pageCount?: number; // Add pageCount to PrintConfig interface
 }
 
 interface OrderFile {
@@ -42,6 +44,7 @@ interface OrderFile {
   uploadDate: string;
   fileId: string;
   printConfig: PrintConfig; // Each file now has its own print config
+  pageCount?: number; // Add pageCount to OrderFile interface
 }
 
 interface ShopkeeperInfo {
@@ -59,16 +62,26 @@ interface ShopkeeperInfo {
 interface Order {
   _id: string;
   jobId: string;
-  orderId: string; // New field for customer-facing order ID
+  orderId: string; // User-friendly order ID, displayed as "Order #fc35ab"
   userId: string;
   username: string; // New field for user's name
   shopkeeperId: ShopkeeperInfo;
   files: OrderFile[]; // Changed from singular file to files array
   jobConfig?: any; // Optional common job configuration
+  printConfig?: PrintConfig; // Add printConfig to Order interface
   status: string;
   payment: {
     status: string;
     method: string;
+  };  pricing?: {
+    baseCost?: number;
+    discount?: number;
+    taxAmount?: number;
+    totalAmount: number;
+    itemCount?: number;
+    totalPages?: number;
+    priorityFee?: number;
+    isShopkeeperPriority?: boolean;
   };
   timeline: {
     created: string;
@@ -83,6 +96,7 @@ interface Order {
   updatedAt: string;
 }
 
+// OrdersPage component to display past print jobs
 const OrdersPage: React.FC = () => {
   // Theme state with localStorage
   const [isDarkTheme, setIsDarkTheme] = useState(() => {
@@ -195,14 +209,17 @@ const OrdersPage: React.FC = () => {
   }, [orders, viewMode]);
 
   // Group orders by submission time
-  const groupedOrders = useMemo(() => groupOrders(filteredOrders), [filteredOrders]);
-
-  // Check if any order in a group is a priority order
+  const groupedOrders = useMemo(() => groupOrders(filteredOrders), [filteredOrders]);  // Check if any order in a group is a priority order
   const isGroupPriority = (orderGroup: Order[]): boolean => {
     return orderGroup.some(order => {
+      // Check if the order itself has priority
+      if (order.printConfig?.isPriority) return true;
+      
       // Check if any file in the order has priority printing
       if (!order.files) return false;
-      return order.files.some(file => file.printConfig?.isPriority);
+      return order.files.some(file => {
+        return file.printConfig?.isPriority === true;
+      });
     });
   };
 
@@ -357,6 +374,7 @@ const OrdersPage: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
                   className={`text-sm font-medium px-4 py-2 rounded-full
                     ${isDarkTheme ? 'bg-white/10' : 'bg-black/5'}`}>
                   Hello, {user.firstName || user.username}
@@ -737,12 +755,9 @@ const OrdersPage: React.FC = () => {
                             <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full blur-lg opacity-10 bg-gradient-to-br from-blue-400 to-purple-400" />
                           )}
                           
-                          <div className="relative z-10">
-                            <div className="flex justify-between items-start mb-4">
+                          <div className="relative z-10">                            <div className="flex justify-between items-start mb-4">
                               <div>
-                                <h3 className="font-medium text-lg mb-1">
-                                  Order #{firstOrder._id.substring(firstOrder._id.length - 6)}
-                                </h3>
+                                <h3 className="font-medium text-lg mb-1">{formatOrderId(firstOrder.orderId)}</h3>
                                 <p className={`text-sm 
                                   ${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}
                                 >
@@ -778,12 +793,30 @@ const OrdersPage: React.FC = () => {
                                   />
                                   <span className={`text-sm 
                                     ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
-                                  >                                    {getMainFileFromOrder(firstOrder)?.printConfig?.copies || 1} {(getMainFileFromOrder(firstOrder)?.printConfig?.copies || 1) > 1 ? 'copies' : 'copy'}, {' '}
+                                  >
+                                    {getMainFileFromOrder(firstOrder)?.printConfig?.copies || 1} {(getMainFileFromOrder(firstOrder)?.printConfig?.copies || 1) > 1 ? 'copies' : 'copy'}, {' '}
                                     {(getMainFileFromOrder(firstOrder)?.printConfig?.colorMode || 'blackAndWhite') === 'blackAndWhite' ? 'B&W' : 'Color'}, {' '}
                                     {getMainFileFromOrder(firstOrder)?.printConfig?.pageSize || 'A4'}
                                   </span>
                                 </div>
                               )}
+                              
+                              {/* Add page count information */}
+                              <div className="flex items-center mb-2">
+                                <FileText className={`h-4 w-4 mr-2 
+                                  ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} 
+                                />
+                                <span className={`text-sm 
+                                  ${isDarkTheme ? 'text-white/70' : 'text-black/70'}`}
+                                >
+                                  {Array.isArray(firstOrder.files) ? 
+                                    `Pages: ${firstOrder.files.reduce((total, file) => {
+                                      // Check for pageCount in different possible locations
+                                      const filePageCount = file.pageCount || file.printConfig?.pageCount || 0;
+                                      return total + filePageCount;
+                                    }, 0)}` : 'Pages: Unknown'}
+                                </span>
+                              </div>
                               
                               <div className="flex items-center">
                                 <Calendar className={`h-4 w-4 mr-2 
@@ -931,10 +964,35 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
       >
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-medium mb-1">Order #{order._id.substring(order._id.length - 6)}</h2>
+            <h2 className="text-2xl font-medium mb-1">Order #{order.orderId}</h2>
             <p className={`${isDarkTheme ? 'text-white/60' : 'text-black/60'}`}>
               {formatDate(order.createdAt)}
             </p>
+            
+            {/* Display total page count and priority status in header */}
+            <div className="flex items-center gap-3 mt-2">
+              {order.files && order.files.length > 0 && (
+                <span className={`text-sm px-2 py-1 rounded-full
+                  ${isDarkTheme 
+                    ? 'bg-blue-500/10 text-blue-300 border border-blue-500/20' 
+                    : 'bg-blue-100 text-blue-600 border border-blue-200'
+                  }`}
+                >                  {formatPageCount(order.files, order)}
+                </span>
+              )}
+              
+              {/* Check if any file has isPriority flag */}
+              {(order.files && order.files.some(file => file.printConfig?.isPriority)) && (
+                <span className={`text-sm px-2 py-1 rounded-full
+                  ${isDarkTheme 
+                    ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' 
+                    : 'bg-amber-100 text-amber-600 border border-amber-200'
+                  }`}
+                >
+                  Priority Order
+                </span>
+              )}
+            </div>
           </div>
           
           <div className={`flex items-center px-4 py-2 rounded-full ${statusInfo.bg} border ${statusInfo.border}`}>
@@ -1033,9 +1091,28 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                     <p className="text-sm font-medium mb-1">File {index + 1}</p>
                     <p className="text-sm break-words">{file.originalName}</p>
                     <p className="text-sm mt-1">
-                      <span className="text-xs text-white/50">Uploaded: </span>
+                      <span className={`text-xs ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Uploaded: </span>
                       {formatDate(file.uploadDate)}
                     </p>
+                    {/* Add page count for each file */}
+                    <p className="text-sm mt-1">
+                      <span className={`text-xs ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages: </span>
+                      {file.pageCount || file.printConfig?.pageCount || 'Unknown'}
+                    </p>
+                    
+                    {/* Display priority status for each file */}
+                    {file.printConfig?.isPriority && (
+                      <p className="text-sm mt-1">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium
+                          ${isDarkTheme 
+                            ? 'bg-amber-400/10 text-amber-300 border border-amber-400/20' 
+                            : 'bg-amber-100 text-amber-700 border border-amber-200'
+                          }`}
+                        >
+                          Priority Print
+                        </span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1074,10 +1151,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                   <div>
                     <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Pages Per Sheet</p>
                     <p className="font-medium">{printConfig.pagesPerSheet}</p>
-                  </div>
-                  <div>
+                  </div>                  <div>
                     <p className={`mb-1 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}>Priority</p>
-                    <p className="font-medium">{printConfig.isPriority ? 'Yes' : 'No'}</p>
+                    <p className="font-medium">{formatPriorityStatus(printConfig)}</p>
                   </div>
                 </div>
               </div>
@@ -1126,15 +1202,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
           
           <div>
             <h4 className="text-sm font-medium mb-3">Payment Information</h4>
-            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>
-              <div className="flex items-start mb-4">
+            <div className={`p-4 rounded-xl ${isDarkTheme ? 'bg-white/5' : 'bg-black/5'}`}>              <div className="flex items-start mb-4">
                 <CreditCard className={`h-5 w-5 mt-0.5 mr-3 ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`} />
                 <div className="flex-1">
                   <div className="flex justify-between mb-2">
                     <p className="text-sm font-medium">Payment Method</p>
                     <p className="text-sm capitalize">{order.payment.method}</p>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between mb-2">
                     <p className="text-sm font-medium">Payment Status</p>
                     <span className={`text-sm capitalize font-medium px-2 py-0.5 rounded-full
                       ${order.payment.status === 'completed' 
@@ -1146,6 +1221,47 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                       {order.payment.status}
                     </span>
                   </div>
+                  
+                  {/* Total Amount */}
+                  {order.pricing && typeof order.pricing.totalAmount === 'number' && (
+                    <div className="flex justify-between mb-2">
+                      <p className="text-sm font-medium">Total Amount</p>
+                      <p className="text-sm font-medium">₹{order.pricing.totalAmount.toFixed(2)}</p>
+                    </div>
+                  )}
+                    {/* Priority Fee */}
+                  {order.pricing && order.pricing.priorityFee && order.pricing.priorityFee > 0 && (
+                    <div className="flex justify-between mb-2">
+                      <p className="text-sm font-medium">Priority Fee</p>
+                      <p className="text-sm">₹{order.pricing.priorityFee.toFixed(2)}</p>
+                    </div>
+                  )}
+                  
+                  {/* Total Pages */}
+                  {order.pricing && typeof order.pricing.totalPages === 'number' && (
+                    <div className="flex justify-between mb-2">
+                      <p className="text-sm font-medium">Total Pages</p>
+                      <p className="text-sm">{order.pricing.totalPages}</p>
+                    </div>
+                  )}
+                    {/* Item Count */}
+                  {order.pricing && typeof order.pricing.itemCount === 'number' && (
+                    <div className="flex justify-between mb-2">
+                      <p className="text-sm font-medium">Items</p>
+                      <p className="text-sm">{order.pricing.itemCount}</p>
+                    </div>
+                  )}
+                  
+                  {/* Shopkeeper Priority */}
+                  {order.pricing && order.pricing.isShopkeeperPriority && (
+                    <div className="flex justify-between">
+                      <p className="text-sm font-medium">Shopkeeper Priority</p>
+                      <span className={`text-sm capitalize font-medium px-2 py-0.5 rounded-full
+                        ${isDarkTheme ? 'bg-purple-500/10 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
+                        Yes
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
                 <div className="flex items-start">

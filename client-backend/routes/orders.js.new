@@ -159,14 +159,14 @@ router.post('/create', async (req, res) => {
           // Include username from order metadata
           username: orderMetadata.username || 'Anonymous User', // Add fallback in case username is missing
           shopkeeperId: new mongoose.Types.ObjectId(orderMetadata.shopkeeperId),
-          files: fileEntries,          status: 'pending',
+          files: fileEntries,
+          status: 'pending',
           // Add pricing information
           pricing: {
             totalAmount: orderMetadata.totalPrice || 0,
             totalPages: fileConfigs.reduce((sum, file) => sum + (file.pageCount || 0), 0),
             itemCount: fileConfigs.length,
-            priorityFee: orderMetadata.isPriorityOrder ? (orderMetadata.priorityFee || 0) : 0,
-            isShopkeeperPriority: orderMetadata.isShopkeeperPriority || false
+            priorityFee: orderMetadata.isPriorityOrder ? (orderMetadata.priorityFee || 0) : 0
           },
           payment: {
             status: 'pending',

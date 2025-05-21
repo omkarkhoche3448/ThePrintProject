@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,10 +18,12 @@ const Login = () => {
   const { login, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate('/dashboard');
-  }
+  // Use useEffect for navigation
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
