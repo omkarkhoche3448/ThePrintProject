@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import JobDetail from "./pages/JobDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import "./App.css";
@@ -38,22 +39,17 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        {isElectronApp && (
-          <div className="fixed top-0 left-0 right-0 bg-primary text-primary-foreground text-xs p-1 text-center z-50">
-            Gemini Property Dashboard Desktop App
-          </div>
-        )}
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/index" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
-            {/* Protected routes */}
+              {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/job/:jobId" element={<JobDetail />} />
               <Route path="/documents" element={<Navigate to="/dashboard" />} />
               <Route path="/calendar" element={<Navigate to="/dashboard" />} />
               <Route path="/printers" element={<Navigate to="/settings" />} />
