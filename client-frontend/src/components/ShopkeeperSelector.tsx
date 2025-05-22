@@ -119,7 +119,7 @@ export const ShopkeeperSelector: React.FC<ShopkeeperSelectorProps> = ({
               <select
                 onChange={handleShopkeeperSelect}
                 value={selectedShopkeeper?._id || ""}
-                className={`w-full p-3 pr-10 rounded-xl border appearance-none transition-colors focus:outline-none
+                className={`w-full p-3 pr-10 rounded-xl border appearance-none transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500
                   ${isDarkTheme 
                     ? 'bg-black/40 border-white/10 text-white placeholder:text-white/50 hover:bg-black/60 focus:bg-black/60'
                     : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 hover:bg-gray-50 focus:bg-gray-50'
@@ -130,7 +130,7 @@ export const ShopkeeperSelector: React.FC<ShopkeeperSelectorProps> = ({
                   appearance: 'none'
                 }}
               >
-                <option value="" disabled>
+                <option value="" disabled className={isDarkTheme ? "bg-[#23272f] text-white" : "bg-white text-black"}>
                   Select a print shop...
                 </option>
                 {shopkeepers.map((shopkeeper) => (
