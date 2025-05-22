@@ -17,12 +17,24 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import websocketService from '@/services/websocketService';
 import printJobService, { PrintJob as PrintJobType } from '@/services/printJobService';
 import printerService, { Printer as PrinterType } from '@/services/printerService';
 
-const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+const Dashboard = () => {  
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [dialogMessage, setDialogMessage] = useState('');
@@ -39,6 +51,39 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
 
   // State for printers
   const [printers, setPrinters] = useState<PrinterType[]>([]);
+  
+  // Printer selection modal state
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
+  const [selectedPrinterId, setSelectedPrinterId] = useState<string>('');
+  const [currentJobId, setCurrentJobId] = useState<string>('');
+
+  // Handle printer status change
+  const handlePrinterStatusChange = async (printerId: string, isOnline: boolean) => {
+    try {
+      const response = await printerService.setPrinterStatus(printerId, isOnline);
+      if (response.success) {
+        // Update local state
+        setPrinters(prev => 
+          prev.map(printer => 
+            printer.id === printerId ? { ...printer, online: isOnline } : printer
+          )
+        );
+        
+        // Update online printer count
+        const updatedOnlinePrinters = printers.filter(p => 
+          p.id === printerId ? isOnline : p.online
+        ).length;
+        setOnlinePrinterCount(updatedOnlinePrinters);
+      }
+    } catch (error) {
+      console.error('Error changing printer status:', error);
+      toast({
+        title: 'Status Change Error',
+        description: 'Failed to update printer status',
+        variant: 'destructive'
+      });
+    }
+  };
 
   // Handle WebSocket connection status
   const handleConnectionStatus = (status: 'connected' | 'disconnected' | 'error') => {
@@ -62,7 +107,8 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
         variant: "destructive"
       });
     }
-  };  // Handle new print job from WebSocket
+  };  
+  // Handle new print job from WebSocket
   const handleNewJob = (job: PrintJobType) => {
     setPrintJobs(prevJobs => [job, ...prevJobs]);
     
@@ -79,7 +125,8 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
     ));
   };
   // Initialize WebSocket and fetch initial data
-  useEffect(() => {    const initializeWebSocket = async () => {
+  useEffect(() => {    
+    const initializeWebSocket = async () => {
       // Set up WebSocket event handlers
       websocketService.onConnectionStatus(handleConnectionStatus);
       websocketService.onNewJob(handleNewJob);
@@ -134,6 +181,7 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
       websocketService.disconnect();
     };
   }, []);
+  
   const handleAutomationToggle = async () => {
     const newStatus = !automationEnabled;
     setDialogTitle('Automation Status Change');
@@ -151,8 +199,18 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
     try {
       // Find the job by orderId
       const job = printJobs.find(job => job.orderId === orderId);
-      if (job) {
-        // Start processing job using the printer service
+      if (!job) {
+        console.error(`Job with orderId ${orderId} not found`);
+        toast({
+          title: "Print Error",
+          description: `Job with order ID #${orderId} not found`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (automationEnabled) {
+        // Automated printing - use the existing logic
         await printerService.printJob(job.jobId);
         
         // Call the original service to update the job status in backend
@@ -166,12 +224,10 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
           });
         }
       } else {
-        console.error(`Job with orderId ${orderId} not found`);
-        toast({
-          title: "Print Error",
-          description: `Job with order ID #${orderId} not found`,
-          variant: "destructive"
-        });
+        // Manual printing - show printer selection modal
+        setCurrentJobId(job.jobId);
+        setSelectedPrinterId(''); // Reset selection
+        setShowPrinterModal(true);
       }
     } catch (error) {
       console.error(`Error printing order ${orderId}:`, error);
@@ -183,40 +239,56 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
     }
   };
   
-  const handlePrinterStatusChange = async (id: string, isOnline: boolean) => {
+  // Handle manual printer selection and printing
+  const handleManualPrint = async () => {
+    if (!selectedPrinterId || !currentJobId) {
+      toast({
+        title: "Printer Selection Required",
+        description: "Please select a printer",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
-      // Update printer status via printer service
-      const result = await printerService.setPrinterStatus(id, isOnline);
+      // Close the modal first
+      setShowPrinterModal(false);
       
-      if (result.success) {
-        // Update local printer state
-        setPrinters(prevPrinters => 
-          prevPrinters.map(printer => 
-            printer.id === id ? { ...printer, online: isOnline } : printer
-          )
-        );
-        
-        // Update online printer count
-        if (isOnline) {
-          setOnlinePrinterCount(prev => prev + 1);
-          setDialogTitle('Printer Online');
-          setDialogMessage(`Printer ${id} is now online. Automated print jobs will be sent to this printer.`);
-        } else {
-          setOnlinePrinterCount(prev => prev - 1);
-          setDialogTitle('Printer Offline');
-          setDialogMessage(`Printer ${id} is now offline. No automated print jobs will be sent to this printer.`);
+      // Print to specific printer
+      await printerService.printJob(currentJobId, selectedPrinterId);
+      
+      // Update job status
+      const response = await printJobService.executeJob(currentJobId, selectedPrinterId);
+      
+      if (response.success) {
+        // Find and update the job in the local state
+        const job = printJobs.find(job => job.jobId === currentJobId);
+        if (job) {
+          handleJobUpdate({
+            ...job,
+            status: 'processing'
+          });
         }
-        setShowDialog(true);
+        
+        toast({
+          title: "Print Job Sent",
+          description: `Job sent to printer successfully`,
+        });
       }
     } catch (error) {
-      console.error('Error changing printer status:', error);
+      console.error('Error in manual printing:', error);
       toast({
-        title: 'Printer Status Error',
-        description: 'Failed to update printer status',
-        variant: 'destructive'
+        title: "Print Error",
+        description: "Failed to send job to printer",
+        variant: "destructive"
       });
+    } finally {
+      // Reset state
+      setCurrentJobId('');
+      setSelectedPrinterId('');
     }
   };
+
   // Helper function to calculate job priority score 
   const calculatePriorityScore = (job: PrintJobType): number => {
     if (!job) return 0;
@@ -269,7 +341,10 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
     }
     
     // Round to nearest integer for cleaner display
-    return Math.round(score);  };  // Filter jobs for UI sections
+    return Math.round(score);
+  };
+  
+  // Filter jobs for UI sections
   const pendingJobs = printJobs.filter(job => job.status === 'pending');
   const processingJobs = printJobs.filter(job => job.status === 'processing');
   
@@ -288,8 +363,12 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
     );
   }
 
+  // Get online printers for selection modal
+  const onlinePrinters = printers.filter(printer => printer.online);
+
   return (
-    <div className="min-h-screen flex bg-background font-gemini">      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+    <div className="min-h-screen flex bg-background font-gemini">      
+      <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
       <div className={`flex-1 p-8 transition-all duration-300 ${sidebarCollapsed ? 'ml-3' : 'ml-6'}`}>
         <Header userName={user?.name} />
@@ -310,13 +389,18 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
             <div className={`w-3 h-3 rounded-full ${webSocketConnected ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
             <span className="text-sm">{webSocketConnected ? 'Connected' : 'Disconnected'}</span>
           </div>
-        </div>        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">          {/* Print Jobs - Scrollable Column */}
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
+          {/* Print Jobs - Scrollable Column */}
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Print Jobs (Priority Queue)</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">{/* Only show jobs with status 'pending' */}
+            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              {/* Only show jobs with status 'pending' */}
               {sortedPendingJobs.length > 0 ? (
                 sortedPendingJobs.map((job, index) => (
-                  <div className="mb-3" key={job.jobId}>                    <PrintJob 
+                  <div className="mb-3" key={job.jobId}>
+                    <PrintJob 
                       orderId={job.orderId}
                       pdfCount={job.pdfCount || job.filesCount || job.fileCount || 0}
                       cost={job.amount ? `Rs ${job.amount.toFixed(2)}` : (job.cost || '$0.00')}
@@ -334,7 +418,8 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
                 </div>
               )}
               
-              {/* Stats at the bottom of the column */}              <div className="mt-6">
+              {/* Stats at the bottom of the column */}
+              <div className="mt-6">
                 <StatsCard 
                   title="Total Print Jobs" 
                   value={pendingJobs.length.toString()}
@@ -349,10 +434,12 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
           {/* Queue Section - Scrollable Column */}
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Queue Section</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">                {/* Only show jobs with status 'processing' */}
+            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              {/* Only show jobs with status 'processing' */}
               {processingJobs.length > 0 ? (
                 processingJobs.map((job, index) => (
-                  <div className="mb-3" key={`queue-${job.jobId}`}>                    <PrintJob 
+                  <div className="mb-3" key={`queue-${job.jobId}`}>
+                    <PrintJob 
                       orderId={job.orderId}
                       pdfCount={job.pdfCount || job.filesCount || job.fileCount || 0}
                       cost={job.amount ? `$${job.amount.toFixed(2)}` : (job.cost || '$0.00')}
@@ -382,7 +469,9 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
                 />
               </div>
             </div>
-          </div>          {/* Printer Section - Scrollable Column */}
+          </div>
+          
+          {/* Printer Section - Scrollable Column */}
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Printer Section</h3>
             <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
@@ -417,7 +506,9 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
             </div>
           </div>
         </div>
-      </div>      {/* Status Dialog */}
+      </div>
+      
+      {/* Status Dialog */}
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -432,8 +523,52 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Printer Selection Modal */}
+      <Dialog open={showPrinterModal} onOpenChange={setShowPrinterModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Printer</DialogTitle>
+            <DialogDescription>
+              Choose an online printer to send this job to
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {onlinePrinters.length > 0 ? (
+              <RadioGroup value={selectedPrinterId} onValueChange={setSelectedPrinterId}>
+                {onlinePrinters.map((printer) => (
+                  <div key={printer.id} className="flex items-center space-x-2 mb-2 p-2 border rounded-md hover:bg-gray-50">
+                    <RadioGroupItem value={printer.id} id={`printer-${printer.id}`} />
+                    <Label htmlFor={`printer-${printer.id}`} className="flex-1 cursor-pointer">
+                      {printer.name}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            ) : (
+              <div className="text-center py-6 text-amber-500">
+                No online printers available. Please enable at least one printer.
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPrinterModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleManualPrint} 
+              disabled={!selectedPrinterId || onlinePrinters.length === 0}
+            >
+              Print
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default Dashboard;
+

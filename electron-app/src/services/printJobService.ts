@@ -129,16 +129,20 @@ class PrintJobService {
         error: error.response?.data?.error || error.message
       };
     }
-  }
-  /**
+  }  /**
    * Execute a job (start processing)
    * @param jobId The ID of the job to execute
+   * @param printerId Optional printer ID to use for this job
    * @returns Promise with job response
    */
-  public async executeJob(jobId: string): Promise<PrintJobResponse> {
+  public async executeJob(jobId: string, printerId?: string): Promise<PrintJobResponse> {
     try {
       // Using the POST endpoint which is more button-friendly for UI actions
-      const response = await api.post(`/job-process/${jobId}/start-processing`);
+      const url = printerId 
+        ? `/job-process/${jobId}/start-processing?printerId=${printerId}`
+        : `/job-process/${jobId}/start-processing`;
+        
+      const response = await api.post(url);
       return response.data;
     } catch (error: any) {
       return {

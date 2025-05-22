@@ -110,17 +110,17 @@ class PrinterService {
       };
     }
   }
-
   /**
-   * Print a specific job
+   * Print a specific job, optionally to a specific printer
    * @param jobId The ID of the job to print
+   * @param printerId Optional ID of the printer to use
    * @returns Promise with operation result
    */
-  public async printJob(jobId: string): Promise<PrinterOperationResponse> {
+  public async printJob(jobId: string, printerId?: string): Promise<PrinterOperationResponse> {
     try {
       // Call to the electron main process
       // @ts-ignore - window.electron is injected by the preload script
-      const response = await window.electron.printJob({ jobId });
+      const response = await window.electron.printJob({ jobId, printerId });
       
       if (response.success) {
         toast({
