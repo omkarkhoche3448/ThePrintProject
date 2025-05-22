@@ -48,9 +48,9 @@ const App = () => {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/documents" element={<Navigate to="/dashboard" />} />
-              <Route path="/calendar" element={<Navigate to="/dashboard" />} />
-              <Route path="/printers" element={<Navigate to="/settings" />} />
+              {/* <Route path="/documents" element={<Navigate to="/dashboard" />} />
+              <Route path="/calendar" element={<Navigate to="/dashboard" />} /> */}
+              {/* <Route path="/printers" element={<Navigate to="/settings" />} /> */}
               <Route path="/help" element={<Navigate to="/settings" />} />
             </Route>
             

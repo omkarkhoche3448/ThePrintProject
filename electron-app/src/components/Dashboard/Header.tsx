@@ -12,7 +12,7 @@ const Header = ({ userName }: HeaderProps) => {
   const displayName = userName || user?.name || 'Shopkeeper';
   
   return (
-    <div className="flex justify-between items-center mb-8">
+    <div className="flex justify-between items-center mb-8 pr-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Hello, {displayName}!</h1>
         <p className="text-sm text-gray-600 mt-1">Explore information and activity about your print shop</p>

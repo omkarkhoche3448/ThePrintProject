@@ -385,7 +385,7 @@ const Dashboard = () => {
           </div>
           
           {/* WebSocket Connection Indicator */}
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center mr-6">
             <div className={`w-3 h-3 rounded-full ${webSocketConnected ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
             <span className="text-sm">{webSocketConnected ? 'Connected' : 'Disconnected'}</span>
           </div>

@@ -302,8 +302,8 @@ const Register = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md mb-8 text-center"
       >
-        <h1 className="text-4xl font-bold text-blue-900">Print Project</h1>
-        <p className="text-blue-600 mt-2">Manage your print shop with ease</p>
+        <h1 className="text-4xl font-bold text-green-900">Print Project</h1>
+        <p className="text-green-600 mt-2">Manage your print shop with ease</p>
       </motion.div>
 
       <motion.div
@@ -313,14 +313,14 @@ const Register = () => {
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         <Card className="border border-gray-200 shadow-lg overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-blue-700 to-blue-900 text-white">
+          <CardHeader className="bg-gradient-to-r from-green-700 to-green-900 text-white">
             <CardTitle className="text-2xl">Register Your Shop</CardTitle>
-            <CardDescription className="text-blue-100">Create an account to start managing your print shop</CardDescription>
+            <CardDescription className="text-green-100">Create an account to start managing your print shop</CardDescription>
             
             {/* Progress bar */}
-            <div className="w-full bg-blue-800 h-3 rounded-full mt-4 overflow-hidden">
+            <div className="w-full bg-green-800 h-3 rounded-full mt-4 overflow-hidden">
               <motion.div 
-                className="h-full bg-blue-300"
+                className="h-full bg-green-300"
                 initial={{ width: 0 }}
                 animate={{ width: `${formCompletionSteps[activeTab as keyof typeof formCompletionSteps]}%` }}
                 transition={{ type: "spring", stiffness: 60, damping: 15 }}
@@ -335,7 +335,7 @@ const Register = () => {
                   <TabsTrigger 
                     key={tab} 
                     value={tab}
-                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                    className="data-[state=active]:bg-green-600 data-[state=active]:text-white"
                   >
                     <motion.div 
                       whileHover={{ scale: 1.05 }}
@@ -373,7 +373,7 @@ const Register = () => {
                           id="name"
                           name="name"
                           placeholder="John Doe"
-                          className="pl-10 focus-visible:ring-blue-500"
+                          className="pl-10 focus-visible:ring-green-500"
                           value={formData.name}
                           onChange={handleInputChange}
                         />
@@ -391,7 +391,7 @@ const Register = () => {
                           name="email"
                           type="email"
                           placeholder="email@example.com"
-                          className="pl-10 focus-visible:ring-blue-500"
+                          className="pl-10 focus-visible:ring-green-500"
                           value={formData.email}
                           onChange={handleInputChange}
                         />
@@ -452,14 +452,14 @@ const Register = () => {
                         className="group"
                       >
                         <span>Already have an account?</span>
-                        <span className="ml-1 text-blue-600 group-hover:underline">Sign in</span>
+                        <span className="ml-1 text-green-600 group-hover:underline">Sign in</span>
                       </Button>
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Button 
                         type="button" 
                         onClick={goToNextTab}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         <span>Next</span>
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -560,7 +560,7 @@ const Register = () => {
                       <Button 
                         type="button" 
                         onClick={goToNextTab}
-                        className="bg-blue-600 hover:bg-blue-700 flex items-center"
+                        className="bg-green-600 hover:bg-green-700 flex items-center"
                       >
                         <span>Next</span>
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -666,7 +666,7 @@ const Register = () => {
                       <Button 
                         type="button" 
                         onClick={goToNextTab}
-                        className="bg-blue-600 hover:bg-blue-700 flex items-center"
+                        className="bg-green-600 hover:bg-green-700 flex items-center"
                       >
                         <span>Next</span>
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -687,7 +687,7 @@ const Register = () => {
                   <CardContent className="space-y-6 pt-6">
                     <motion.h3 
                       variants={itemVariants} 
-                      className="text-lg font-medium mb-2 text-blue-800"
+                      className="text-lg font-medium mb-2 text-green-800"
                     >
                       Shop Hours
                     </motion.h3>
@@ -698,7 +698,7 @@ const Register = () => {
                         key={day}
                         variants={itemVariants}
                         custom={index}
-                        className="grid grid-cols-3 gap-4 items-center p-3 rounded-md hover:bg-blue-50 transition-colors"
+                        className="grid grid-cols-3 gap-4 items-center p-3 rounded-md hover:bg-green-50 transition-colors"
                       >
                         <div className="font-medium capitalize">{day}:</div>
                         <div className="space-y-1">
@@ -729,13 +729,13 @@ const Register = () => {
                     {/* Discount Section */}
                     <motion.h3 
                       variants={itemVariants}
-                      className="text-lg font-medium mt-6 mb-2 text-blue-800"
+                      className="text-lg font-medium mt-6 mb-2 text-green-800"
                     >
                       Discount Rule
                     </motion.h3>
                     <motion.div 
                       variants={itemVariants}
-                      className="grid grid-cols-2 gap-4 items-center p-3 rounded-md bg-blue-50"
+                      className="grid grid-cols-2 gap-4 items-center p-3 rounded-md bg-green-50"
                     >
                       <div className="space-y-1">
                         <Label htmlFor="discountPercentage">Discount Percentage (%)</Label>

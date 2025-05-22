@@ -8,21 +8,29 @@ import {
   Settings, 
   HelpCircle, 
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   LogOut,
   Printer
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  userName?: string;
 }
 
-const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
+const Sidebar = ({ collapsed, setCollapsed, userName }: SidebarProps) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const { user } = useAuth();
+  
+  // Use the provided userName, or fall back to user from context, or default to 'Shopkeeper'
+  const displayName = userName || user?.name || 'Shopkeeper';
 
   return (
-    <div className={`h-screen bg-white rounded-r-3xl py-8 flex flex-col justify-between transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
+    <div className={`h-screen bg-white rounded-r-3xl py-8 flex flex-col justify-between transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'} relative`}>
       <div>
         <div className="flex justify-center mb-10">
           <div className="w-10 h-10 flex items-center justify-center">
@@ -36,21 +44,31 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
 
         <div className="space-y-6 px-4">
           <NavItem icon={<Grid3X3 />} label="Dashboard" path="/dashboard" collapsed={collapsed} active={currentPath === '/dashboard'} />
-          <NavItem icon={<Printer />} label="Printers" path="/printers" collapsed={collapsed} active={currentPath === '/printers'} />
-          <NavItem icon={<FileText />} label="Documents" path="/documents" collapsed={collapsed} active={currentPath === '/documents'} />
-          <NavItem icon={<Calendar />} label="Calendar" path="/calendar" collapsed={collapsed} active={currentPath === '/calendar'} />
+          {/* <NavItem icon={<Printer />} label="Printers" path="/printers" collapsed={collapsed} active={currentPath === '/printers'} /> */}
+          {/* <NavItem icon={<FileText />} label="Documents" path="/documents" collapsed={collapsed} active={currentPath === '/documents'} /> */}
+          {/* <NavItem icon={<Calendar />} label="Calendar" path="/calendar" collapsed={collapsed} active={currentPath === '/calendar'} /> */}
           <NavItem icon={<Settings />} label="Settings" path="/settings" collapsed={collapsed} active={currentPath === '/settings'} />
-          <NavItem icon={<HelpCircle />} label="Help" path="/help" collapsed={collapsed} active={currentPath === '/help'} />
+          {/* <NavItem icon={<HelpCircle />} label="Help" path="/help" collapsed={collapsed} active={currentPath === '/help'} /> */}
         </div>
       </div>
 
       <div className="px-4">
+        {/* Improved collapse button */}
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center mb-8 w-10 h-10 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+          className={`flex items-center justify-between w-full mb-8 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 group`}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <ArrowLeft className={`w-5 h-5 text-gray-500 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+          {!collapsed && <span className="text-sm font-medium text-gray-700">Collapse Menu</span>}
+          <div className={`${collapsed ? 'mx-auto' : ''} flex items-center justify-center w-6 h-6 rounded-full bg-white shadow-sm`}>
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            )}
+          </div>
         </button>
+
         <div className="flex items-center mb-6">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-orange-200">
             <img 
@@ -59,15 +77,26 @@ const Sidebar = ({ collapsed, setCollapsed }: SidebarProps) => {
               className="w-full h-full object-cover"
             />
           </div>
-          {!collapsed && (
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-800">John Doe</p>
-              <p className="text-xs text-gray-500">Admin</p>
-            </div>
-          )}
+          <div className={`ml-3 overflow-hidden transition-all duration-300 ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            <p className="text-sm font-medium text-gray-800 whitespace-nowrap">{displayName}</p>
+            <p className="text-xs text-gray-500 whitespace-nowrap">Admin</p>
+          </div>
         </div>
         <NavItem icon={<LogOut />} label="Sign Out" path="/login" collapsed={collapsed} />
       </div>
+
+      {/* Absolute positioned collapse button for smaller screens */}
+      <button 
+        onClick={() => setCollapsed(!collapsed)}
+        className={`absolute -right-3 top-20 hidden md:flex items-center justify-center w-6 h-12 bg-white rounded-r-md shadow-md border border-l-0 border-gray-200 hover:bg-gray-50 transition-colors`}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? (
+          <ChevronRight className="w-4 h-4 text-gray-600" />
+        ) : (
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+        )}
+      </button>
     </div>
   );
 };

@@ -79,7 +79,7 @@ const Landing = () => {
               className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 leading-tight"
               variants={heroTextVariants}
             >
-              Manage Your Print Shop <span className="text-primary">Effortlessly</span>
+              Manage Your Print Shop <span className="text-green-600">Effortlessly</span>
             </motion.h1>
             
             <motion.p 
@@ -97,7 +97,7 @@ const Landing = () => {
               <Button 
                 onClick={() => navigate('/register')}
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-white rounded-lg px-8 py-6 text-lg"
+                className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-8 py-6 text-lg"
               >
                 <span>Start Free Trial</span>
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -107,7 +107,7 @@ const Landing = () => {
                 onClick={() => navigate('/login')}
                 variant="outline"
                 size="lg"
-                className="border-primary text-primary hover:bg-primary/10 rounded-lg px-8 py-6 text-lg"
+                className="border-green-600 text-green-600 hover:bg-green-50 rounded-lg px-8 py-6 text-lg"
               >
                 Sign In
               </Button>
@@ -124,7 +124,7 @@ const Landing = () => {
             }}
           >
             <div className="relative w-full max-w-md mx-auto">
-              <div className="absolute inset-0 bg-primary rounded-xl transform rotate-3"></div>
+              <div className="absolute inset-0 bg-green-600 rounded-xl transform rotate-3"></div>
               <img 
                 src="/placeholder.svg" 
                 alt="Print Shop Dashboard" 
@@ -165,7 +165,7 @@ const Landing = () => {
               <motion.div 
                 key={feature.id}
                 className={`p-6 rounded-lg shadow-md border border-gray-100 transition-all duration-300 ${
-                  isHovering === feature.id ? 'bg-primary/5 transform scale-105' : 'bg-white'
+                  isHovering === feature.id ? 'bg-green-50 transform scale-105' : 'bg-white'
                 }`}
                 onMouseEnter={() => setIsHovering(feature.id)}
                 onMouseLeave={() => setIsHovering(null)}
@@ -174,7 +174,7 @@ const Landing = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <div className="mb-4 p-3 inline-block rounded-full bg-primary/10 text-primary">
+                <div className="mb-4 p-3 inline-block rounded-full bg-green-100 text-green-600">
                   <feature.icon className="h-6 w-6" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-800">{feature.title}</h3>
@@ -192,7 +192,7 @@ const Landing = () => {
           >
             <Button 
               onClick={() => navigate('/register')}
-              className="bg-primary hover:bg-primary/90 text-white rounded-lg px-8 py-6 text-lg"
+              className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-8 py-6 text-lg"
               size="lg"
             >
               <span>Get Started Today</span>
@@ -205,7 +205,7 @@ const Landing = () => {
       <section className="w-full py-16 px-4 md:px-6 lg:px-12 bg-muted/50">
         <div className="max-w-7xl mx-auto">
           <motion.div 
-            className="bg-primary rounded-lg p-8 md:p-12 text-white shadow-lg overflow-hidden relative"
+            className="bg-green-600 rounded-lg p-8 md:p-12 text-white shadow-lg overflow-hidden relative"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -252,7 +252,7 @@ const Landing = () => {
               <div className="mt-10 flex flex-wrap gap-3">
                 <Button 
                   onClick={() => navigate('/register')}
-                  className="bg-white text-primary hover:bg-white/90 rounded-lg"
+                  className="bg-white text-green-600 hover:bg-white/90 rounded-lg"
                 >
                   Create Your Account
                 </Button>
@@ -290,7 +290,7 @@ const Landing = () => {
               <Button 
                 onClick={() => navigate('/register')}
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-white rounded-lg px-8 py-6 text-lg"
+                className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-8 py-6 text-lg"
               >
                 <span>Start Your Free Trial</span>
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -300,7 +300,7 @@ const Landing = () => {
                 onClick={() => navigate('/login')}
                 variant="outline"
                 size="lg"
-                className="border-primary text-primary hover:bg-primary/10 rounded-lg px-8 py-6 text-lg"
+                className="border-green-600 text-green-600 hover:bg-green-50 rounded-lg px-8 py-6 text-lg"
               >
                 Sign In
               </Button>
@@ -310,7 +310,7 @@ const Landing = () => {
       </section>
       
       {/* Footer */}
-      <footer className="w-full py-8 px-4 md:px-6 lg:px-12 bg-primary text-white">
+      <footer className="w-full py-8 px-4 md:px-6 lg:px-12 bg-green-600 text-white">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
           <p className="text-xl font-bold mb-4 md:mb-0">Print Project</p>
           

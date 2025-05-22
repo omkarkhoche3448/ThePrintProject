@@ -198,11 +198,12 @@ const Settings = () => {
     <div className="min-h-screen flex bg-background font-gemini">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-3' : 'ml-6'}`}>
+        <div className="ml-10 mt-8">
         <Header userName={user?.name} />
-        
+        </div>        
         <div className="px-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-6 ml-2">Settings</h1>
           
           <Tabs defaultValue="account" className="w-full">
             <TabsList className="mb-6">
