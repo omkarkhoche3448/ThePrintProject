@@ -1,6 +1,5 @@
 
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Grid3X3, 
   FileText, 
@@ -23,11 +22,21 @@ interface SidebarProps {
 
 const Sidebar = ({ collapsed, setCollapsed, userName }: SidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   // Use the provided userName, or fall back to user from context, or default to 'Shopkeeper'
   const displayName = userName || user?.name || 'Shopkeeper';
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <div className={`h-screen bg-white rounded-r-3xl py-8 flex flex-col justify-between transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'} relative`}>
@@ -82,7 +91,19 @@ const Sidebar = ({ collapsed, setCollapsed, userName }: SidebarProps) => {
             <p className="text-xs text-gray-500 whitespace-nowrap">Admin</p>
           </div>
         </div>
-        <NavItem icon={<LogOut />} label="Sign Out" path="/login" collapsed={collapsed} />
+        
+        {/* Sign Out button */}
+        <button 
+          onClick={handleSignOut}
+          className="w-full"
+        >
+          <div className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors text-gray-500 hover:bg-gray-100`}>
+            <div className="w-6 h-6 flex items-center justify-center">
+              <LogOut />
+            </div>
+            {!collapsed && <span className="ml-3 text-sm font-medium">Sign Out</span>}
+          </div>
+        </button>
       </div>
 
       {/* Absolute positioned collapse button for smaller screens */}
