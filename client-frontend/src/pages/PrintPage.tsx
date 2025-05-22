@@ -326,19 +326,20 @@ function PrintPage() {
   };
 
   return (
+    // Update the main container theme
     <div className={`min-h-screen font-sans transition-colors duration-500 
       ${isDarkTheme 
         ? 'bg-[#0a0a0a] text-white' 
         : 'bg-[#f5f5f7] text-[#1d1d1f]'
       }`}
     >
-      {/* Glassmorphic Navigation */}
+      {/* Update navigation theme */}
       <motion.nav 
         style={{ opacity: headerOpacity }}
         className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-xl
           ${isDarkTheme 
-            ? 'bg-black/30 border-b border-white/5' 
-            : 'bg-white/30 border-b border-black/5'
+            ? 'bg-white/5 border-b border-white/10' 
+            : 'bg-white/80 border-b border-black/5'
           }`}
       >
         <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
@@ -606,6 +607,7 @@ function PrintPage() {
                         <PrintOptionsForm
                           options={file.options}
                           onChange={(options) => handleOptionsChange(file.id, options)}
+                          pageCount={file.pageCount}
                           isDarkTheme={isDarkTheme}
                           shopkeeper={selectedShopkeeper}
                         />

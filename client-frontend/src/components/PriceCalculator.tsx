@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import type { PrintFile } from '../types/print';
+import type { Shopkeeper } from '../types/print';
 import { DollarSign } from 'lucide-react';
 
 // Add Switch component
@@ -54,15 +55,20 @@ export const PriceCalculator: React.FC<PriceCalculatorProps> = ({
   const totalPrice = subtotal * priorityMultiplier;
 
   return (
-    <div className={`sticky top-24 rounded-lg shadow-lg p-6 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}>
-      <h3 className="text-lg font-medium mb-4">Order Summary</h3>
+    <div className={`sticky top-24 rounded-2xl backdrop-blur-lg border p-6
+      ${isDarkTheme 
+        ? 'bg-white/5 border-white/10 shadow-none'
+        : 'bg-white/80 border-black/5 shadow-lg'
+      }`}
+    >
+      <h3 className={`text-lg font-medium mb-4 ${isDarkTheme ? 'text-white' : 'text-black'}`}>Order Summary</h3>
       
       {/* Priority Toggle */}
-      <div className={`flex items-center justify-between p-4 rounded-lg mb-4
-        ${isDarkTheme ? 'bg-gray-700' : 'bg-gray-50'}`}>
+      <div className={`flex items-center justify-between p-4 rounded-xl mb-4
+        ${isDarkTheme ? 'bg-white/10' : 'bg-black/5'}`}>
         <div className="space-y-1">
-          <div className="font-medium">⚡ Priority Order</div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <div className={`font-medium ${isDarkTheme ? 'text-white' : 'text-black'}`}>⚡ Priority Order</div>
+          <p className={`text-sm ${isDarkTheme ? 'text-white/60' : 'text-gray-500'}`}>
             {isPriority 
               ? `${shopkeeper?.priorityRate}x rate applies` 
               : 'Standard processing time'}
@@ -85,7 +91,7 @@ export const PriceCalculator: React.FC<PriceCalculatorProps> = ({
 
       {/* Price Breakdown */}
       <div className="space-y-2">
-        <div className="flex justify-between text-sm">
+        <div className={`flex justify-between text-sm ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>
           <span>Subtotal</span>
           <span>₹{subtotal.toFixed(2)}</span>
         </div>
@@ -95,8 +101,8 @@ export const PriceCalculator: React.FC<PriceCalculatorProps> = ({
             <span>+₹{(subtotal * (priorityMultiplier - 1)).toFixed(2)}</span>
           </div>
         )}
-        <div className="border-t pt-2 mt-2">
-          <div className="flex justify-between font-medium text-lg">
+        <div className={`border-t pt-2 mt-2 ${isDarkTheme ? 'border-white/10' : 'border-black/10'}`}>
+          <div className={`flex justify-between font-medium text-lg ${isDarkTheme ? 'text-white' : 'text-black'}`}>
             <span>Total</span>
             <span>₹{totalPrice.toFixed(2)}</span>
           </div>

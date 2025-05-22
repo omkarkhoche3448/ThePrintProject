@@ -27,7 +27,11 @@ export const PrintOptionsForm: React.FC<PrintOptionsFormProps> = ({
   isDarkTheme
 }) => {
   return (
-    <div className={`p-4 rounded-lg ${isDarkTheme ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className={`p-4 rounded-lg transition-colors duration-200 ${
+      isDarkTheme 
+        ? 'bg-black/20 border border-white/10' 
+        : 'bg-white border border-gray-200'
+    }`}>
       <CompactPrintOptions
         options={options}
         onChange={onChange}
