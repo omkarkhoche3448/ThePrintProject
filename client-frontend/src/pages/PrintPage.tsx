@@ -620,7 +620,7 @@ function PrintPage() {
                       <div className="flex justify-between items-center">
                         <span>Subtotal for this document:</span>
                         <span className={`${isDarkTheme ? 'text-blue-300' : 'text-blue-600'}`}>
-                          ${file.price.toFixed(2)}
+                          ₹{file.price.toFixed(2)}
                         </span>
                       </div>
                     </div>

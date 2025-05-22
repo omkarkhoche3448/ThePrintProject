@@ -7,12 +7,14 @@ interface FileUploaderProps {
   onFilesAdded: (files: File[]) => void;
   files: PrintFile[];
   onRemoveFile: (id: string) => void;
+  isDarkTheme?: boolean; // Add theme prop (optional)
 }
 
 export const FileUploader: React.FC<FileUploaderProps> = ({
   onFilesAdded,
   files,
   onRemoveFile,
+  isDarkTheme = false // Default to false if not provided
 }) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -39,13 +41,17 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         className={`p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors
           ${
             isDragActive
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-blue-400'
+              ? isDarkTheme
+                ? 'border-blue-400 bg-blue-900/30'
+                : 'border-blue-500 bg-blue-50'
+              : isDarkTheme
+                ? 'border-white/10 bg-black/30 hover:border-blue-400'
+                : 'border-gray-300 hover:border-blue-400'
           }`}
       >
         <input {...getInputProps()} />
-        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-        <p className="mt-2 text-sm text-gray-600">
+        <Upload className={`mx-auto h-12 w-12 ${isDarkTheme ? 'text-white/40' : 'text-gray-400'}`} />
+        <p className={`mt-2 text-sm ${isDarkTheme ? 'text-white/70' : 'text-gray-600'}`}>
           {isDragActive
             ? 'Drop your PDF files here'
             : 'Drag & drop PDF files here, or click to select files'}
@@ -53,7 +59,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       </div>
 
       {files.length > 0 && (
-        <ul className="divide-y divide-gray-200">
+        <ul className={`divide-y ${isDarkTheme ? 'divide-white/10' : 'divide-gray-200'}`}>
           {files.map((file) => (
             <li
               key={file.id}
@@ -68,10 +74,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                   />
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className={`text-sm font-medium truncate max-w-xs ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
                     {file.file.name}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className={`text-sm ${isDarkTheme ? 'text-white/60' : 'text-gray-500'}`}>
                     {(file.file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>

@@ -87,7 +87,7 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
           </select>
         </div>
         {/* Row 3 */}
-        <div className="col-span-2 flex items-center space-x-4">
+        {/* <div className="col-span-2 flex items-center space-x-4">
           <Copy className="h-4 w-4" />
           <input
             type="number"
@@ -106,7 +106,7 @@ export const CompactPrintOptions: React.FC<CompactPrintOptionsProps> = ({
             className={baseInputClass}
             placeholder={`e.g., 1-${pageCount}`}
           />
-        </div>
+        </div> */}
       </div>
     </div>
   );

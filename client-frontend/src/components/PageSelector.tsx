@@ -12,7 +12,7 @@ export const PageSelector: React.FC<PageSelectorProps> = ({
   pageCount,
   value,
   onChange,
-  isDarkTheme = false // Default to false if not provided
+  isDarkTheme = false
 }) => {
   const [error, setError] = useState<string>('');
 
@@ -64,12 +64,15 @@ export const PageSelector: React.FC<PageSelectorProps> = ({
           value={value}
           onChange={handleChange}
           placeholder="e.g., 1-3, 5, 7-9"
-          className={`w-full px-3 py-2 border rounded-md transition-colors duration-200
-            ${error 
-              ? 'border-red-500' 
-              : isDarkTheme 
-                ? 'bg-black/20 border-white/10 text-white placeholder:text-white/40 focus:bg-black/30'
-                : 'bg-white border-gray-300 text-black placeholder:text-gray-400 focus:bg-gray-50'
+          className={`w-full px-3 py-2 border rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500
+            ${
+              error
+                ? isDarkTheme
+                  ? 'border-red-500 bg-red-900/30 text-white placeholder:text-red-200'
+                  : 'border-red-500 bg-red-100 text-red-700 placeholder:text-red-400'
+                : isDarkTheme
+                  ? 'bg-black/40 border-white/10 text-white placeholder:text-white/60 hover:bg-black/60 focus:bg-black/60'
+                  : 'bg-white border-gray-300 text-black placeholder:text-gray-400 hover:bg-gray-50 focus:bg-gray-50'
             }`}
         />
         <span className={`text-sm ${isDarkTheme ? 'text-white/60' : 'text-gray-500'}`}>
