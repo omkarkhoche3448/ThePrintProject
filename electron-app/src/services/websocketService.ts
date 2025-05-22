@@ -125,13 +125,12 @@ class WebSocketService {
       const message = JSON.parse(event.data);
       
       switch (message.type) {
-        case 'newPrintJob':
-          if (this.onNewJobCallback) {
+        case 'newPrintJob':          if (this.onNewJobCallback) {
             this.onNewJobCallback(message.data);
           }
           toast({
             title: "New Print Job",
-            description: `Job #${message.data.orderId} has been received.`
+            description: `Job #${message.data.orderId} from ${message.data.username || 'Unknown'} has been received.`
           });
           break;
           

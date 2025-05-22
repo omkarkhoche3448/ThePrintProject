@@ -11,8 +11,28 @@ export interface PrintJob {
   createdAt: string;
   updatedAt: string;
   filesCount: number;
+  fileCount?: number;
   pdfCount?: number;
   cost?: string;
+  amount?: number;
+  pricing?: {
+    totalAmount?: number;
+    itemCount?: number;
+    totalPages?: number;
+    priorityFee?: number;
+    isShopkeeperPriority?: boolean;
+    baseCost?: number;
+    discount?: number;
+    taxAmount?: number;
+  };
+  payment?: {
+    status?: string;
+    method?: string;
+  };
+  timeline?: {
+    created?: string;
+    deliveryMethod?: string;
+  };
 }
 
 export interface PrintJobResponse {

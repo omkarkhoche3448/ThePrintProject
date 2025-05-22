@@ -62,11 +62,14 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
         variant: "destructive"
       });
     }
-  };
-
-  // Handle new print job from WebSocket
+  };  // Handle new print job from WebSocket
   const handleNewJob = (job: PrintJobType) => {
     setPrintJobs(prevJobs => [job, ...prevJobs]);
+    
+    // Log useful debugging info for the priority system
+    const priorityScore = calculatePriorityScore(job);
+    console.log(`New job received: #${job.orderId} from ${job.username || 'Unknown'}`);
+    console.log(`Priority details: Score: ${priorityScore}, Priority Fee: ${job.pricing?.priorityFee || 0}, Pages: ${job.pricing?.totalPages || job.pdfCount || job.filesCount || 'Unknown'}`);
   };
 
   // Handle print job update from WebSocket
@@ -76,8 +79,7 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
     ));
   };
   // Initialize WebSocket and fetch initial data
-  useEffect(() => {
-    const initializeWebSocket = async () => {
+  useEffect(() => {    const initializeWebSocket = async () => {
       // Set up WebSocket event handlers
       websocketService.onConnectionStatus(handleConnectionStatus);
       websocketService.onNewJob(handleNewJob);
@@ -215,10 +217,66 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
       });
     }
   };
-
-  // Filter jobs for UI sections
+  // Helper function to calculate job priority score 
+  const calculatePriorityScore = (job: PrintJobType): number => {
+    if (!job) return 0;
+    
+    // Priority score algorithm:
+    // 1. Priority fee: +50 points if paid, +30 if shopkeeper priority
+    // 2. Age: +0.5 points per minute (up to 60 minutes) to prevent jobs from aging too long
+    // 3. Page count: Small jobs (<10 pages) get bonus points to move ahead
+    //    Large jobs (>50 pages) get slightly penalized to avoid blocking the queue
+    
+    // Base score starts at 0
+    let score = 0;
+    
+    // Factor 1: Priority fee (highest weight)
+    const hasPriorityFee = job.pricing?.priorityFee && job.pricing.priorityFee > 0;
+    const isShopkeeperPriority = job.pricing?.isShopkeeperPriority;
+    
+    if (hasPriorityFee) {
+      score += 50;
+    } else if (isShopkeeperPriority) {
+      score += 30;
+    }
+    
+    // Factor 2: Job age - older jobs should get higher priority to avoid aging
+    // We don't have access to exact timestamp here, so use the jobId which contains timestamp
+    // Format: JOB-timestamp-random
+    if (job.jobId) {
+      const parts = job.jobId.split('-');
+      if (parts.length >= 2) {
+        const timestamp = parseInt(parts[1], 10);
+        if (!isNaN(timestamp)) {
+          // Current time
+          const now = Date.now();
+          // Calculate age in minutes (max 60 minutes = 1 hour)
+          const ageInMinutes = Math.min(60, Math.floor((now - timestamp) / (1000 * 60)));
+          // Add 0.5 points per minute of age (max 30 points for being 1 hour old)
+          score += ageInMinutes * 0.5;
+        }
+      }
+    }
+    
+    // Factor 3: Page count (small jobs get priority)
+    const pageCount = job.pricing?.totalPages || job.pdfCount || job.filesCount || 1;
+    // For jobs with less than 10 pages, add bonus points
+    if (pageCount <= 10) {
+      score += Math.max(0, 10 - pageCount) * 2; // max 20 points for 1-page jobs
+    } else {
+      // For larger jobs, slightly reduce priority (never below 0)
+      score = Math.max(0, score - Math.min(10, Math.floor(pageCount / 50))); 
+    }
+    
+    // Round to nearest integer for cleaner display
+    return Math.round(score);  };  // Filter jobs for UI sections
   const pendingJobs = printJobs.filter(job => job.status === 'pending');
   const processingJobs = printJobs.filter(job => job.status === 'processing');
+  
+  // Sort pending jobs to prioritize urgent jobs
+  const sortedPendingJobs = [...pendingJobs].sort((a, b) => {
+    return calculatePriorityScore(b) - calculatePriorityScore(a);
+  });
 
   // Loading state JSX
   if (isLoading) {
@@ -252,22 +310,21 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
             <div className={`w-3 h-3 rounded-full ${webSocketConnected ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
             <span className="text-sm">{webSocketConnected ? 'Connected' : 'Disconnected'}</span>
           </div>
-        </div>        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
-          {/* Print Jobs - Scrollable Column */}
+        </div>        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">          {/* Print Jobs - Scrollable Column */}
           <div className="flex flex-col h-full">
-            <h3 className="text-md font-semibold mb-4">Print Jobs</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              {/* Only show jobs with status 'pending' */}
-              {pendingJobs.length > 0 ? (
-                pendingJobs.map((job, index) => (
-                  <div className="mb-3" key={job.jobId}>
-                    <PrintJob 
+            <h3 className="text-md font-semibold mb-4">Print Jobs (Priority Queue)</h3>
+            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">{/* Only show jobs with status 'pending' */}
+              {sortedPendingJobs.length > 0 ? (
+                sortedPendingJobs.map((job, index) => (
+                  <div className="mb-3" key={job.jobId}>                    <PrintJob 
                       orderId={job.orderId}
-                      pdfCount={job.pdfCount || job.filesCount}
-                      cost={job.cost || '$0.00'}
+                      pdfCount={job.pdfCount || job.filesCount || job.fileCount || 0}
+                      cost={job.amount ? `Rs ${job.amount.toFixed(2)}` : (job.cost || '$0.00')}
+                      username={job.username}
                       automationEnabled={automationEnabled}
                       onPrint={() => handlePrint(job.orderId)}
                       queueNumber={index + 1}
+                      priorityScore={calculatePriorityScore(job)}
                     />
                   </div>
                 ))
@@ -277,14 +334,13 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
                 </div>
               )}
               
-              {/* Stats at the bottom of the column */}
-              <div className="mt-6">
+              {/* Stats at the bottom of the column */}              <div className="mt-6">
                 <StatsCard 
                   title="Total Print Jobs" 
                   value={pendingJobs.length.toString()}
                   percentChange={15} 
                   icon={<FileText className="w-5 h-5 text-primary" />} 
-                  additionalInfo="Last week total: 12"
+                  additionalInfo={`${sortedPendingJobs.length} jobs with priority scoring`}
                 />
               </div>
             </div>
@@ -293,19 +349,19 @@ const Dashboard = () => {  const [sidebarCollapsed, setSidebarCollapsed] = useSt
           {/* Queue Section - Scrollable Column */}
           <div className="flex flex-col h-full">
             <h3 className="text-md font-semibold mb-4">Queue Section</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">              
-              {/* Only show jobs with status 'processing' */}
+            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">                {/* Only show jobs with status 'processing' */}
               {processingJobs.length > 0 ? (
                 processingJobs.map((job, index) => (
-                  <div className="mb-3" key={`queue-${job.jobId}`}>
-                    <PrintJob 
+                  <div className="mb-3" key={`queue-${job.jobId}`}>                    <PrintJob 
                       orderId={job.orderId}
-                      pdfCount={job.pdfCount || job.filesCount}
-                      cost={job.cost || '$0.00'}
+                      pdfCount={job.pdfCount || job.filesCount || job.fileCount || 0}
+                      cost={job.amount ? `$${job.amount.toFixed(2)}` : (job.cost || '$0.00')}
+                      username={job.username}
                       automationEnabled={automationEnabled}
                       onPrint={() => {}} // Required prop, but no-op in queue
                       queueNumber={index + 1}
                       showPrintButton={false}
+                      priorityScore={calculatePriorityScore(job)}
                     />
                   </div>
                 ))
