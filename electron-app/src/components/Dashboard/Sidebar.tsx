@@ -1,6 +1,5 @@
 
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Grid3X3, 
   FileText, 
@@ -23,11 +22,21 @@ interface SidebarProps {
 
 const Sidebar = ({ collapsed, setCollapsed, userName }: SidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   // Use the provided userName, or fall back to user from context, or default to 'Shopkeeper'
   const displayName = userName || user?.name || 'Shopkeeper';
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <div className={`h-screen bg-white rounded-r-3xl py-8 flex flex-col justify-between transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'} relative`}>
@@ -70,19 +79,37 @@ const Sidebar = ({ collapsed, setCollapsed, userName }: SidebarProps) => {
         </button>
 
         <div className="flex items-center mb-6">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-orange-200">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-orange-200 flex-shrink-0">
             <img 
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80" 
               alt="User profile" 
               className="w-full h-full object-cover"
             />
           </div>
-          <div className={`ml-3 overflow-hidden transition-all duration-300 ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            <p className="text-sm font-medium text-gray-800 whitespace-nowrap">{displayName}</p>
-            <p className="text-xs text-gray-500 whitespace-nowrap">Admin</p>
+          <div 
+            className={`ml-3 overflow-hidden transition-all duration-300 ease-out ${
+              collapsed ? 'w-0 opacity-0' : 'w-40 opacity-100'
+            }`}
+          >
+            <div className="transform-none">
+              <p className="text-sm font-medium text-gray-800 whitespace-nowrap">{displayName}</p>
+              <p className="text-xs text-gray-500 whitespace-nowrap">Admin</p>
+            </div>
           </div>
         </div>
-        <NavItem icon={<LogOut />} label="Sign Out" path="/login" collapsed={collapsed} />
+        
+        {/* Sign Out button */}
+        <button 
+          onClick={handleSignOut}
+          className="w-full"
+        >
+          <div className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors text-gray-500 hover:bg-gray-100`}>
+            <div className="w-6 h-6 flex items-center justify-center">
+              <LogOut />
+            </div>
+            {!collapsed && <span className="ml-3 text-sm font-medium">Sign Out</span>}
+          </div>
+        </button>
       </div>
 
       {/* Absolute positioned collapse button for smaller screens */}
