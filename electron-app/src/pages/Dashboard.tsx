@@ -7,15 +7,15 @@ import PrinterCard from '../components/Dashboard/PrinterCard';
 import PrintJob from '../components/Dashboard/PrintJob';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
-import { 
+import {
   AlertDialog,
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
@@ -33,7 +33,7 @@ import websocketService from '@/services/websocketService';
 import printJobService, { PrintJob as PrintJobType } from '@/services/printJobService';
 import printerService, { Printer as PrinterType } from '@/services/printerService';
 
-const Dashboard = () => {  
+const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
@@ -41,17 +41,17 @@ const Dashboard = () => {
   const [dialogTitle, setDialogTitle] = useState('');
   const [onlinePrinterCount, setOnlinePrinterCount] = useState(0);
   const { user } = useAuth();
-  
+
   // Add loading state for API data
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // State for print jobs from WebSocket
   const [printJobs, setPrintJobs] = useState<PrintJobType[]>([]);
   const [webSocketConnected, setWebSocketConnected] = useState(false);
 
   // State for printers
   const [printers, setPrinters] = useState<PrinterType[]>([]);
-  
+
   // Printer selection modal state
   const [showPrinterModal, setShowPrinterModal] = useState(false);
   const [selectedPrinterId, setSelectedPrinterId] = useState<string>('');
@@ -63,14 +63,14 @@ const Dashboard = () => {
       const response = await printerService.setPrinterStatus(printerId, isOnline);
       if (response.success) {
         // Update local state
-        setPrinters(prev => 
-          prev.map(printer => 
+        setPrinters(prev =>
+          prev.map(printer =>
             printer.id === printerId ? { ...printer, online: isOnline } : printer
           )
         );
-        
+
         // Update online printer count
-        const updatedOnlinePrinters = printers.filter(p => 
+        const updatedOnlinePrinters = printers.filter(p =>
           p.id === printerId ? isOnline : p.online
         ).length;
         setOnlinePrinterCount(updatedOnlinePrinters);
@@ -88,7 +88,7 @@ const Dashboard = () => {
   // Handle WebSocket connection status
   const handleConnectionStatus = (status: 'connected' | 'disconnected' | 'error') => {
     setWebSocketConnected(status === 'connected');
-    
+
     if (status === 'connected') {
       toast({
         title: "Connected to Print Server",
@@ -107,11 +107,11 @@ const Dashboard = () => {
         variant: "destructive"
       });
     }
-  };  
+  };
   // Handle new print job from WebSocket
   const handleNewJob = (job: PrintJobType) => {
     setPrintJobs(prevJobs => [job, ...prevJobs]);
-    
+
     // Log useful debugging info for the priority system
     const priorityScore = calculatePriorityScore(job);
     console.log(`New job received: #${job.orderId} from ${job.username || 'Unknown'}`);
@@ -120,41 +120,41 @@ const Dashboard = () => {
 
   // Handle print job update from WebSocket
   const handleJobUpdate = (updatedJob: PrintJobType) => {
-    setPrintJobs(prevJobs => prevJobs.map(job => 
+    setPrintJobs(prevJobs => prevJobs.map(job =>
       job.jobId === updatedJob.jobId ? updatedJob : job
     ));
   };
   // Initialize WebSocket and fetch initial data
-  useEffect(() => {    
+  useEffect(() => {
     const initializeWebSocket = async () => {
       // Set up WebSocket event handlers
       websocketService.onConnectionStatus(handleConnectionStatus);
       websocketService.onNewJob(handleNewJob);
       websocketService.onJobUpdate(handleJobUpdate);
-      
+
       // Connect to WebSocket server
       await websocketService.connect();
     };
-    
+
     const fetchInitialJobs = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch initial print jobs
         const response = await printJobService.fetchJobs();
         if (response.success && response.jobs) {
           setPrintJobs(response.jobs);
         }
-        
+
         // Fetch printers
         const printersResponse = await printerService.getPrinters();
         if (printersResponse.success && printersResponse.printers) {
           setPrinters(printersResponse.printers);
-          
+
           // Count online printers
           const onlinePrinters = printersResponse.printers.filter(p => p.online).length;
           setOnlinePrinterCount(onlinePrinters);
-          
+
           // Get automation status
           if (printersResponse.automationEnabled !== undefined) {
             setAutomationEnabled(printersResponse.automationEnabled);
@@ -171,30 +171,30 @@ const Dashboard = () => {
         setIsLoading(false);
       }
     };
-    
+
     // Initialize everything
     initializeWebSocket();
     fetchInitialJobs();
-    
+
     // Cleanup on unmount
     return () => {
       websocketService.disconnect();
     };
   }, []);
-  
+
   const handleAutomationToggle = async () => {
     const newStatus = !automationEnabled;
     setDialogTitle('Automation Status Change');
     setDialogMessage(`${newStatus ? 'Enabling' : 'Disabling'} automatic printing. ${newStatus ? 'Print jobs will now be sent automatically to online printers.' : 'Print jobs will require manual printing.'}`);
     setShowDialog(true);
-    
+
     // Update automation status through service
     await printerService.setAutomationEnabled(newStatus);
-    
+
     // Update local state
     setAutomationEnabled(newStatus);
   };
-  
+
   const handlePrint = async (orderId: string) => {
     try {
       // Find the job by orderId
@@ -212,10 +212,10 @@ const Dashboard = () => {
       if (automationEnabled) {
         // Automated printing - use the existing logic
         await printerService.printJob(job.jobId);
-        
+
         // Call the original service to update the job status in backend
         const response = await printJobService.executeJob(job.jobId);
-        
+
         if (response.success) {
           // Update local state to reflect job status change to "processing"
           handleJobUpdate({
@@ -238,7 +238,7 @@ const Dashboard = () => {
       });
     }
   };
-  
+
   // Handle manual printer selection and printing
   const handleManualPrint = async () => {
     if (!selectedPrinterId || !currentJobId) {
@@ -249,17 +249,17 @@ const Dashboard = () => {
       });
       return;
     }
-    
+
     try {
       // Close the modal first
       setShowPrinterModal(false);
-      
+
       // Print to specific printer
       await printerService.printJob(currentJobId, selectedPrinterId);
-      
+
       // Update job status
       const response = await printJobService.executeJob(currentJobId, selectedPrinterId);
-      
+
       if (response.success) {
         // Find and update the job in the local state
         const job = printJobs.find(job => job.jobId === currentJobId);
@@ -269,7 +269,7 @@ const Dashboard = () => {
             status: 'processing'
           });
         }
-        
+
         toast({
           title: "Print Job Sent",
           description: `Job sent to printer successfully`,
@@ -292,26 +292,26 @@ const Dashboard = () => {
   // Helper function to calculate job priority score 
   const calculatePriorityScore = (job: PrintJobType): number => {
     if (!job) return 0;
-    
+
     // Priority score algorithm:
     // 1. Priority fee: +50 points if paid, +30 if shopkeeper priority
     // 2. Age: +0.5 points per minute (up to 60 minutes) to prevent jobs from aging too long
     // 3. Page count: Small jobs (<10 pages) get bonus points to move ahead
     //    Large jobs (>50 pages) get slightly penalized to avoid blocking the queue
-    
+
     // Base score starts at 0
     let score = 0;
-    
+
     // Factor 1: Priority fee (highest weight)
     const hasPriorityFee = job.pricing?.priorityFee && job.pricing.priorityFee > 0;
     const isShopkeeperPriority = job.pricing?.isShopkeeperPriority;
-    
+
     if (hasPriorityFee) {
       score += 50;
     } else if (isShopkeeperPriority) {
       score += 30;
     }
-    
+
     // Factor 2: Job age - older jobs should get higher priority to avoid aging
     // We don't have access to exact timestamp here, so use the jobId which contains timestamp
     // Format: JOB-timestamp-random
@@ -329,7 +329,7 @@ const Dashboard = () => {
         }
       }
     }
-    
+
     // Factor 3: Page count (small jobs get priority)
     const pageCount = job.pricing?.totalPages || job.pdfCount || job.filesCount || 1;
     // For jobs with less than 10 pages, add bonus points
@@ -337,17 +337,17 @@ const Dashboard = () => {
       score += Math.max(0, 10 - pageCount) * 2; // max 20 points for 1-page jobs
     } else {
       // For larger jobs, slightly reduce priority (never below 0)
-      score = Math.max(0, score - Math.min(10, Math.floor(pageCount / 50))); 
+      score = Math.max(0, score - Math.min(10, Math.floor(pageCount / 50)));
     }
-    
+
     // Round to nearest integer for cleaner display
     return Math.round(score);
   };
-  
+
   // Filter jobs for UI sections
   const pendingJobs = printJobs.filter(job => job.status === 'pending');
   const processingJobs = printJobs.filter(job => job.status === 'processing');
-  
+
   // Sort pending jobs to prioritize urgent jobs
   const sortedPendingJobs = [...pendingJobs].sort((a, b) => {
     return calculatePriorityScore(b) - calculatePriorityScore(a);
@@ -367,40 +367,58 @@ const Dashboard = () => {
   const onlinePrinters = printers.filter(printer => printer.online);
 
   return (
-    <div className="min-h-screen flex bg-background font-gemini">      
+    <div className="min-h-screen flex bg-background font-gemini">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-      
-      <div className={`flex-1 p-8 transition-all duration-300 ${sidebarCollapsed ? 'ml-3' : 'ml-6'}`}>
+
+      <div className={`flex-1 p-8 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-72'}`}>
         <Header userName={user?.name} />
-        
+
         <div className="flex items-center mb-6">
           <h2 className="text-lg font-semibold mr-4">Automation</h2>
           <div className="flex items-center">
-            <Switch 
-              checked={automationEnabled} 
-              onCheckedChange={handleAutomationToggle} 
+            <Switch
+              checked={automationEnabled}
+              onCheckedChange={handleAutomationToggle}
               className={automationEnabled ? "bg-green-500" : "bg-red-500"}
             />
             <span className="ml-2 text-sm">{automationEnabled ? 'Enabled' : 'Disabled'}</span>
           </div>
-          
+
           {/* WebSocket Connection Indicator */}
           <div className="ml-auto flex items-center mr-6">
             <div className={`w-3 h-3 rounded-full ${webSocketConnected ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
             <span className="text-sm">{webSocketConnected ? 'Connected' : 'Disconnected'}</span>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)] overflow-hidden">
           {/* Print Jobs - Scrollable Column */}
-          <div className="flex flex-col h-full">
-            <h3 className="text-md font-semibold mb-4">Print Jobs (Priority Queue)</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div className="flex flex-col h-full max-h-[calc(100vh-220px)] overflow-hidden">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0 px-1">
+              <h3 className="text-md font-semibold">Print Jobs (Priority Queue)</h3>
+              {/* <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full text-sm">
+                <span className="font-medium">{pendingJobs.length}</span>
+                <span className="ml-1 text-gray-500">jobs</span>
+              </div> */}
+            </div>
+            
+            {/* Stats card outside scrollable area */}
+            <div className="mb-4 flex-shrink-0 ">
+              <StatsCard
+                title="Total Print Jobs"
+                value={pendingJobs.length.toString()}
+                percentChange={15}
+                icon={<FileText className="w-5 h-5 text-primary" />}
+                additionalInfo={`${sortedPendingJobs.length} jobs with priority scoring`}
+              />
+            </div>
+            
+            <div className="overflow-y-auto flex-grow pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 h-[calc(100vh-420px)]">
               {/* Only show jobs with status 'pending' */}
               {sortedPendingJobs.length > 0 ? (
                 sortedPendingJobs.map((job, index) => (
                   <div className="mb-3" key={job.jobId}>
-                    <PrintJob 
+                    <PrintJob
                       orderId={job.orderId}
                       pdfCount={job.pdfCount || job.filesCount || job.fileCount || 0}
                       cost={job.amount ? `Rs ${job.amount.toFixed(2)}` : (job.cost || '$0.00')}
@@ -413,39 +431,46 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-6 text-gray-400">
+                <div className="text-start py-6 text-gray-400">
                   No print jobs available
                 </div>
               )}
-              
-              {/* Stats at the bottom of the column */}
-              <div className="mt-6">
-                <StatsCard 
-                  title="Total Print Jobs" 
-                  value={pendingJobs.length.toString()}
-                  percentChange={15} 
-                  icon={<FileText className="w-5 h-5 text-primary" />} 
-                  additionalInfo={`${sortedPendingJobs.length} jobs with priority scoring`}
-                />
-              </div>
             </div>
           </div>
 
           {/* Queue Section - Scrollable Column */}
-          <div className="flex flex-col h-full">
-            <h3 className="text-md font-semibold mb-4">Queue Section</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div className="flex flex-col h-full max-h-[calc(100vh-220px)] overflow-hidden">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0 px-1">
+              <h3 className="text-md font-semibold">Queue Section</h3>
+              {/* <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full text-sm">
+                <span className="font-medium">{processingJobs.length}</span>
+                <span className="ml-1 text-gray-500">in queue</span>
+              </div> */}
+            </div>
+            
+            {/* Stats card outside scrollable area */}
+            <div className="mb-4 flex-shrink-0">
+              <StatsCard
+                title="In Queue"
+                value={processingJobs.length.toString()}
+                percentChange={-10}
+                icon={<BarChart3 className="w-5 h-5 text-primary" />}
+                additionalInfo="Processing time: ~5 min"
+              />
+            </div>
+            
+            <div className="overflow-y-auto flex-grow pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 h-[calc(100vh-420px)]">
               {/* Only show jobs with status 'processing' */}
               {processingJobs.length > 0 ? (
                 processingJobs.map((job, index) => (
                   <div className="mb-3" key={`queue-${job.jobId}`}>
-                    <PrintJob 
+                    <PrintJob
                       orderId={job.orderId}
                       pdfCount={job.pdfCount || job.filesCount || job.fileCount || 0}
                       cost={job.amount ? `$${job.amount.toFixed(2)}` : (job.cost || '$0.00')}
                       username={job.username}
                       automationEnabled={automationEnabled}
-                      onPrint={() => {}} // Required prop, but no-op in queue
+                      onPrint={() => { }} // Required prop, but no-op in queue
                       queueNumber={index + 1}
                       showPrintButton={false}
                       priorityScore={calculatePriorityScore(job)}
@@ -453,35 +478,33 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-6 text-gray-400">
+                <div className="text-start py-6 text-gray-400">
                   No jobs in queue
                 </div>
               )}
-
-              {/* Queue stats */}
-              <div className="mt-6">
-                <StatsCard 
-                  title="In Queue" 
-                  value={processingJobs.length.toString()}
-                  percentChange={-10} 
-                  icon={<BarChart3 className="w-5 h-5 text-primary" />} 
-                  additionalInfo="Processing time: ~5 min"
-                />
-              </div>
             </div>
           </div>
-          
+
           {/* Printer Section - Scrollable Column */}
-          <div className="flex flex-col h-full">
-            <h3 className="text-md font-semibold mb-4">Printer Section</h3>
-            <div className="overflow-y-auto h-full pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div className="flex flex-col h-full max-h-[calc(100vh-220px)] overflow-hidden">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0 px-1">
+              <h3 className="text-md font-semibold">Printers</h3>
+              <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full text-sm">
+                <div className={`w-2 h-2 rounded-full ${onlinePrinterCount > 0 ? 'bg-green-500' : 'bg-red-500'} mr-2`}></div>
+                <span className="font-medium">{onlinePrinterCount}</span>
+                <span className="text-gray-500 mx-1">/</span>
+                <span>{printers.length}</span>
+                <span className="ml-1 text-gray-500">online</span>
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-grow pr-2 pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {/* Printer List */}
               <div className="space-y-2 mb-6">
                 {printers.length > 0 ? (
                   printers.map((printer) => (
-                    <PrinterCard 
-                      key={printer.id} 
-                      name={printer.name} 
+                    <PrinterCard
+                      key={printer.id}
+                      name={printer.name}
                       id={printer.id}
                       onStatusChange={handlePrinterStatusChange}
                       initialOnline={printer.online}
@@ -495,19 +518,19 @@ const Dashboard = () => {
               </div>
 
               {/* Printer stats */}
-              <div className="mt-6">
+              {/* <div className="mt-6">
                 <StatsCard 
                   title="Online Printers" 
                   value={`${onlinePrinterCount}/${printers.length}`} 
                   percentChange={printers.length === 0 ? 0 : Math.round((onlinePrinterCount / printers.length) * 100)} 
                   icon={<DollarSign className="w-5 h-5 text-primary" />} 
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Status Dialog */}
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
@@ -523,7 +546,7 @@ const Dashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Printer Selection Modal */}
       <Dialog open={showPrinterModal} onOpenChange={setShowPrinterModal}>
         <DialogContent className="sm:max-w-md">
@@ -533,7 +556,7 @@ const Dashboard = () => {
               Choose an online printer to send this job to
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             {onlinePrinters.length > 0 ? (
               <RadioGroup value={selectedPrinterId} onValueChange={setSelectedPrinterId}>
@@ -552,13 +575,13 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPrinterModal(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleManualPrint} 
+            <Button
+              onClick={handleManualPrint}
               disabled={!selectedPrinterId || onlinePrinters.length === 0}
             >
               Print

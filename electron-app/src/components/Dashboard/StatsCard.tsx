@@ -28,7 +28,7 @@ const StatsCard = ({ title, value, percentChange, icon, additionalInfo }: StatsC
       
       <div className="space-y-2">
         <h2 className="text-3xl font-bold">{value}</h2>
-        <div className="flex items-center text-sm">
+        {/* <div className="flex items-center text-sm">
           <div className={`flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
             {isPositive ? (
               <TrendingUp className="w-4 h-4 mr-1" />
@@ -40,7 +40,7 @@ const StatsCard = ({ title, value, percentChange, icon, additionalInfo }: StatsC
           {additionalInfo && (
             <span className="text-gray-500 ml-3">{additionalInfo}</span>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

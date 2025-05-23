@@ -198,7 +198,7 @@ const Settings = () => {
     <div className="min-h-screen flex bg-background font-gemini">
       <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       
-      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-3' : 'ml-6'}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-72'}`}>
         <div className="ml-10 mt-8">
         <Header userName={user?.name} />
         </div>        

@@ -39,8 +39,8 @@ const Sidebar = ({ collapsed, setCollapsed, userName }: SidebarProps) => {
   };
 
   return (
-    <div className={`h-screen bg-white rounded-r-3xl py-8 flex flex-col justify-between transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'} relative`}>
-      <div>
+    <div className={`fixed top-0 left-0 h-screen bg-white rounded-r-3xl py-8 flex flex-col justify-between transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'} z-40`}>
+      <div className="flex-shrink-0">
         <div className="flex justify-center mb-10">
           <div className="w-10 h-10 flex items-center justify-center">
             <svg className="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
