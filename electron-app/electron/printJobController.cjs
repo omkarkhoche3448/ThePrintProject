@@ -179,8 +179,7 @@ class PrintJobController {
   
   /**
    * Poll for jobs in "processing" status
-   */
-  async pollForJobs() {
+   */  async pollForJobs() {
     if (!this.isConnectedToDb) {
       try {
         await this.checkDbConnection();
@@ -188,13 +187,6 @@ class PrintJobController {
         console.log('[PrintJobController] Database connection still unavailable');
         return;
       }
-    }
-    
-    if (!this.automationEnabled) {
-      // Only poll for jobs that are already in processing state
-      // but not for new pending jobs
-      console.log('[PrintJobController] Automation disabled, skipping pending jobs poll');
-      return;
     }
     
     try {
@@ -237,10 +229,10 @@ class PrintJobController {
               this.processingJobs.delete(job.jobId);
             });
         }
-        
-        return; // Exit early since we closed the connection
+          return; // Exit early since we closed the connection
       }
-        // 2. Next, if automation is enabled, check for pending jobs to move to processing
+        
+      // 2. Next, if automation is enabled, check for pending jobs to move to processing
       if (this.automationEnabled) {
         // Get available printers
         const availablePrinters = this.printerManager.availablePrinters;
