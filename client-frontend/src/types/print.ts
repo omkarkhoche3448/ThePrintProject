@@ -1,7 +1,7 @@
 export type PaperSize = 'A4' | 'A3' | 'Letter' | 'Legal';
 export type ColorMode = 'color' | 'monochrome';
 export type Orientation = 'portrait' | 'landscape';
-export type PagesPerSheet = '1' | '2' | '4' | '6';
+export type PagesPerSheet = '1' | '2' | '4' | '6' | '8';
 export type BorderStyle = 'none' | 'single';
 
 export interface PrintOptions {

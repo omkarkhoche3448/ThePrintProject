@@ -1,7 +1,18 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import type { PrintFile } from '../types/print';
-import type { Shopkeeper } from '../types/print';
-import { DollarSign } from 'lucide-react';
+
+// Define Shopkeeper interface
+interface Shopkeeper {
+  printCosts: {
+    blackAndWhite: number;
+    color: number;
+  };
+  priorityRate: number;
+  discountRules: Array<{
+    discountPercentage: number;
+    minimumOrderAmount: number;
+  }>;
+}
 
 // Add Switch component
 interface SwitchProps {
@@ -87,14 +98,22 @@ export const PriceCalculator: React.FC<PriceCalculatorProps> = ({
         <div className="text-sm text-amber-500 dark:text-amber-400 mb-4">
           Priority orders are processed faster but cost {((shopkeeper.priorityRate - 1) * 100).toFixed(0)}% more
         </div>
-      )}
-
-      {/* Price Breakdown */}
+      )}      {/* Price Breakdown */}
       <div className="space-y-2">
         <div className={`flex justify-between text-sm ${isDarkTheme ? 'text-white/80' : 'text-black/80'}`}>
           <span>Subtotal</span>
           <span>₹{subtotal.toFixed(2)}</span>
         </div>
+        
+        {/* Pricing information */}
+        {shopkeeper && (
+          <div className={`text-xs ${isDarkTheme ? 'text-white/60' : 'text-gray-500'} mt-1 mb-2`}>
+            <div>Black & White: ₹{shopkeeper.printCosts.blackAndWhite} per sheet</div>
+            <div>Color: ₹{shopkeeper.printCosts.color} per sheet</div>
+            <div className="mt-1">Price adjusted for pages per sheet</div>
+          </div>
+        )}
+        
         {isPriority && (
           <div className="flex justify-between text-sm text-amber-500">
             <span>Priority Rate ({shopkeeper?.priorityRate}x)</span>
