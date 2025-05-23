@@ -183,29 +183,7 @@ export const ShopkeeperSelector: React.FC<ShopkeeperSelectorProps> = ({
                       </span>
                     </div>
 
-                    {/* Update other sections similarly */}
-                    {/* Shop Hours Section */}
-                    <div className={`p-3 rounded-xl ${
-                      isDarkTheme ? 'bg-white/5' : 'bg-white/60'
-                    }`}>
-                      <span className="font-medium block mb-2">🕒 Shop Hours:</span>
-                      <div className="grid grid-cols-1 gap-1">
-                        {Object.entries(selectedShopkeeper.shopHours).map(([day, hours]) => {
-                          const isOpen = hours.open && hours.close;
-                          return (
-                            <div key={day} 
-                              className="flex justify-between items-center py-1 border-b last:border-b-0 border-gray-200 dark:border-gray-500">
-                              <span className="capitalize w-24">{day}</span>
-                              <span className={`${!isOpen ? 'text-red-500' : ''} font-medium`}>
-                                {isOpen 
-                                  ? `${formatTime(hours.open)} - ${formatTime(hours.close)}`
-                                  : 'Closed'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    ``
 
                     {/* Printing Costs Section */}
                     <div className={`p-3 rounded-xl ${
