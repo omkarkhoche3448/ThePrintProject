@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useUser, SignedIn, SignedOut, useClerk } from '@clerk/clerk-react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import AuthModal from '../components/AuthModal';
 
 const HomePage = () => {
   // Theme state with localStorage
@@ -24,6 +25,10 @@ const HomePage = () => {
     return savedTheme === 'dark' || 
            (savedTheme === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+  
+  // Auth modal state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalView, setAuthModalView] = useState<'signIn' | 'signUp'>('signIn');
 
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -117,11 +122,13 @@ const HomePage = () => {
           
           <div className="flex items-center space-x-8">
             <SignedOut>
-              <div className="hidden md:flex items-center space-x-6">
-                <motion.button
+              <div className="hidden md:flex items-center space-x-6">                <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate('/sign-in')}
+                  onClick={() => {
+                    setAuthModalView('signIn');
+                    setIsAuthModalOpen(true);
+                  }}
                   className={`px-6 py-2.5 rounded-full text-sm font-medium tracking-wide transition-all
                     ${isDarkTheme 
                       ? 'bg-white text-black hover:bg-white/90' 
@@ -136,7 +143,10 @@ const HomePage = () => {
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate('/sign-up')}
+                  onClick={() => {
+                    setAuthModalView('signUp');
+                    setIsAuthModalOpen(true);
+                  }}
                   className={`px-6 py-2.5 rounded-full text-sm font-medium tracking-wide transition-all
                     ${isDarkTheme 
                       ? 'bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/10' 
@@ -273,11 +283,13 @@ const HomePage = () => {
               </Link>
             </SignedIn>
             
-            <SignedOut>
-              <motion.button
+            <SignedOut>              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/sign-in')}
+                onClick={() => {
+                  setAuthModalView('signIn');
+                  setIsAuthModalOpen(true);
+                }}
                 className={`w-full sm:w-auto px-8 py-4 rounded-full text-base font-medium transition-all
                   ${isDarkTheme 
                     ? 'bg-white text-black hover:bg-white/90' 
@@ -412,11 +424,13 @@ const HomePage = () => {
                 </Link>
               </SignedIn>
               
-              <SignedOut>
-                <motion.button
+              <SignedOut>                <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => navigate('/sign-in')}
+                  onClick={() => {
+                    setAuthModalView('signIn');
+                    setIsAuthModalOpen(true);
+                  }}
                   className={`flex items-center justify-center space-x-3 px-8 py-4 rounded-full text-base font-medium transition-all mx-auto
                     ${isDarkTheme 
                       ? 'bg-white text-black hover:bg-white/90' 
@@ -458,11 +472,13 @@ const HomePage = () => {
             </Link>
           </SignedIn>
           
-          <SignedOut>
-            <motion.button
+          <SignedOut>            <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/sign-up')}
+              onClick={() => {
+                setAuthModalView('signUp');
+                setIsAuthModalOpen(true);
+              }}
               className={`flex items-center justify-center h-16 w-16 rounded-full shadow-lg transition-all
                 ${isDarkTheme 
                   ? 'bg-white text-black hover:bg-white/90' 
@@ -474,6 +490,14 @@ const HomePage = () => {
           </SignedOut>
         </motion.div>
       </AnimatePresence>
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialView={authModalView}
+        isDarkTheme={isDarkTheme}
+      />
     </div>
   );
 };

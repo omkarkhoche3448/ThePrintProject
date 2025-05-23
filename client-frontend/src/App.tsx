@@ -1,10 +1,8 @@
-import React from 'react';
 import { Routes, Route, Navigate, BrowserRouter as Router } from 'react-router-dom';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
-import { SignIn, SignUp } from '@clerk/clerk-react';
+import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import PrintPage from './pages/PrintPage';
 import HomePage from './pages/HomePage';
-import OrdersPage from './pages/OrdersPage'; // Add this import
+import OrdersPage from './pages/OrdersPage';
 
 function App() {
   return (
@@ -13,46 +11,36 @@ function App() {
         {/* Home Page - Always Accessible */}
         <Route path="/" element={<HomePage />} />
         
-        {/* Authentication Routes */}
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/sign-up" element={<SignUp />} />
+        {/* We keep these routes for direct deep linking, but the modal is preferred */}
+        <Route path="/sign-in" element={<Navigate to="/" replace />} />
+        <Route path="/sign-up" element={<Navigate to="/" replace />} />
         
-        {/* Protected Print Page */}
+        {/* Protected Pages */}
         <Route 
           path="/print-page" 
           element={
-            <SignedIn>
-              <PrintPage />
-            </SignedIn>
-          } 
-        />
-        
-        {/* Protected Orders Page */}
-        <Route 
-          path="/orders" 
-          element={
-            <SignedIn>
-              <OrdersPage />
-            </SignedIn>
-          } 
-        />
-        
-        {/* Redirect Unauthenticated Users from Protected Pages */}
-        <Route 
-          path="/print-page" 
-          element={
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
+            <>
+              <SignedIn>
+                <PrintPage />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/" replace />
+              </SignedOut>
+            </>
           } 
         />
         
         <Route 
           path="/orders" 
           element={
-            <SignedOut>
-              <RedirectToSignIn />
-            </SignedOut>
+            <>
+              <SignedIn>
+                <OrdersPage />
+              </SignedIn>
+              <SignedOut>
+                <Navigate to="/" replace />
+              </SignedOut>
+            </>
           } 
         />
         
