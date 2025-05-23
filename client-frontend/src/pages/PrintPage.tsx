@@ -111,9 +111,14 @@ function PrintPage() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkTheme]);
-
   // File Processing Handler
   const handleFilesAdded = useCallback(async (newFiles: File[]) => {
+    // Check if a shopkeeper is selected before proceeding
+    if (!selectedShopkeeper) {
+      setError("Please select a shopkeeper before uploading files");
+      return;
+    }
+    
     setIsProcessing(true);
     setError(null);
     try {
@@ -429,11 +434,57 @@ function PrintPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className={`text-lg text-center max-w-3xl mx-auto mb-16
+            className={`text-lg text-center max-w-3xl mx-auto mb-4
               ${isDarkTheme ? 'text-white/70' : 'text-[#1d1d1f]/70'}`}
           >
             Configure your documents with premium options for exceptional results.
           </motion.p>
+          
+          {/* Add a step indication for better user guidance */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className={`flex items-center justify-center gap-4 mb-16 max-w-2xl mx-auto
+              ${isDarkTheme ? 'text-white/80' : 'text-[#1d1d1f]/80'}`}
+          >
+            <div className={`flex items-center ${selectedShopkeeper ? 'text-green-500' : ''}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 
+                ${selectedShopkeeper 
+                  ? isDarkTheme ? 'bg-green-500/20 border border-green-500/30' : 'bg-green-100 border border-green-200' 
+                  : isDarkTheme ? 'bg-white/10 border border-white/20' : 'bg-black/5 border border-black/10'
+                }`}
+              >
+                1
+              </div>
+              <span className={selectedShopkeeper ? "font-medium" : ""}>Select Shop</span>
+            </div>
+            
+            <div className={`w-8 border-t ${isDarkTheme ? 'border-white/20' : 'border-black/20'}`}></div>
+            
+            <div className={`flex items-center ${files.length > 0 ? 'text-green-500' : ''}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2
+                ${files.length > 0
+                  ? isDarkTheme ? 'bg-green-500/20 border border-green-500/30' : 'bg-green-100 border border-green-200' 
+                  : isDarkTheme ? 'bg-white/10 border border-white/20' : 'bg-black/5 border border-black/10'
+                }`}
+              >
+                2
+              </div>
+              <span className={files.length > 0 ? "font-medium" : ""}>Upload Files</span>
+            </div>
+            
+            <div className={`w-8 border-t ${isDarkTheme ? 'border-white/20' : 'border-black/20'}`}></div>
+            
+            <div className={`flex items-center`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-2
+                ${isDarkTheme ? 'bg-white/10 border border-white/20' : 'bg-black/5 border border-black/10'}`}
+              >
+                3
+              </div>
+              <span>Checkout</span>
+            </div>
+          </motion.div>
           
           {/* Error alert */}
           <AnimatePresence>
@@ -498,13 +549,13 @@ function PrintPage() {
                 <div className="absolute -left-20 -top-20 h-40 w-40 rounded-full blur-3xl opacity-10 bg-blue-500" />
                 <div className="absolute -right-20 -bottom-20 h-40 w-40 rounded-full blur-3xl opacity-10 bg-purple-500" />
                 
-                <div className="p-6 relative z-10">
-                  <h2 className="text-xl font-medium mb-6">Upload Documents</h2>
+                <div className="p-6 relative z-10">                  <h2 className="text-xl font-medium mb-6">Upload Documents</h2>
                   <FileUploader
                     onFilesAdded={handleFilesAdded}
                     files={files}
                     onRemoveFile={handleRemoveFile}
                     isDarkTheme={isDarkTheme}
+                    shopkeeperSelected={!!selectedShopkeeper}
                   />
                 </div>
                 
@@ -763,15 +814,14 @@ function PrintPage() {
                       <Lock className="h-5 w-5 mr-2" />
                       {isProcessing ? 'Processing...' : 'Proceed to Checkout'}
                     </motion.button>
-                    
-                    {(files.length === 0 || !selectedShopkeeper) && (
+                      {(files.length === 0 || !selectedShopkeeper) && (
                       <p className={`text-xs text-center mt-2
-                        ${isDarkTheme ? 'text-white/50' : 'text-black/50'}`}
+                        ${!selectedShopkeeper ? 'text-red-500 font-medium' : isDarkTheme ? 'text-white/50' : 'text-black/50'}`}
                       >
                         {files.length === 0 
                           ? 'Please upload at least one document'
                           : !selectedShopkeeper
-                            ? 'Select a print shop to continue'
+                            ? 'You must select a print shop first!'
                             : ''
                         }
                       </p>
